@@ -5,7 +5,7 @@ A personal aggregator of **new rental listings in Île-de-France**, hosted entir
 - a Python crawler (`scraper/`) runs every 20 minutes in GitHub Actions and normalises each source into one schema,
 - the result is committed to `data/listings.json`,
 - a static site (`site/`) on GitHub Pages filters that file in the browser with Jinka's filter vocabulary,
-- new listings matching `filter.json` are pushed to Telegram.
+- new listings matching `filter.json` are posted to a Discord channel through a webhook.
 
 The mechanism mirrors what the Jinka app does server-side (one normalised schema, a `source` slug per ad, a saved filter, a liveness re-check of stored links). Nothing here talks to Jinka's API.
 
@@ -71,10 +71,10 @@ python3 -m http.server 8765                          # then open http://127.0.0.
 1. Push this repository (public is fine: it contains only public ads and no secrets).
 2. **Pages**: Settings → Pages → Source: *GitHub Actions*. The `pages.yml` workflow deploys `site/` plus `data/listings.json` on every push that changes them.
 3. **Actions permissions**: Settings → Actions → General → Workflow permissions: *Read and write* (the crawl workflow commits `data/listings.json` back).
-4. **Telegram secrets** (Settings → Secrets and variables → Actions → New repository secret):
-   - `TELEGRAM_BOT_TOKEN`: create a bot with [@BotFather](https://t.me/BotFather) (`/newbot`), copy the token.
-   - `TELEGRAM_CHAT_ID`: send any message to your bot, then open `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy `message.chat.id`. For a group, add the bot to the group and use the (negative) group id.
-   Without these secrets the workflow still runs; matching listings are printed in the job log instead.
+4. **Discord webhook** (Settings → Secrets and variables → Actions → New repository secret):
+   - In Discord, open the target channel → Edit channel → Integrations → Webhooks → New webhook → Copy webhook URL.
+   - Save it as the repository secret `DISCORD_WEBHOOK_URL`.
+   Without this secret the workflow still runs; matching listings are printed in the job log instead. Each run posts at most 20 listings (10 embeds per message, each with photo, rent, specs, place and the link to the original ad) plus a one-line count of the rest.
 5. Edit `filter.json` to taste (same keys as the site's filters: `rent_min`, `rent_max`, `area_min`, `area_max`, `room_min`, `bedroom_min`, `furnished` yes/no/ns, `owner_type` Particulier/Agence/ns, `dpe` list, `sources` list, `where.dpts` department codes, `where.postalCodes`). `"ns"` or a missing key means not specified.
 6. Run the crawl once by hand: Actions → *Crawl rentals* → *Run workflow*. It then runs every 20 minutes (GitHub may delay scheduled runs by a few minutes, and pauses schedules on repositories with no activity for 60 days).
 
@@ -91,10 +91,10 @@ scraper/            Python package (python -m scraper)
   sources/          one module per source (bienici.py, pap.py)
   dedupe.py         URL + fingerprint + photo dHash
   store.py          load/merge/liveness/prune/save data/listings.json
-  notify.py         filter.json matching and Telegram
+  notify.py         filter.json matching and Discord webhook
 tests/              unittest suite with a saved PAP list fixture
 data/listings.json  crawler output (committed by the workflow)
 site/               static front end for GitHub Pages
-filter.json         the saved alert used for Telegram
+filter.json         the saved alert used for Discord alerts
 .github/workflows/  crawl.yml (cron */20) and pages.yml
 ```

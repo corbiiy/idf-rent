@@ -35,8 +35,7 @@ jobs:
 
       - name: Crawl, re-check liveness, notify
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DEPARTMENTS: ${{ github.event.inputs.departments || '75,77,78,91,92,93,94,95' }}
         run: python -m scraper --departments "$DEPARTMENTS" --notify
 

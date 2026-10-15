@@ -64,3 +64,40 @@ class BieniciTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DiscordTest(unittest.TestCase):
+    def test_embed_shape(self):
+        from scraper.notify import format_embed
+        e = format_embed(mk(photos=["https://p/1.jpg"], posted_at="2026-10-15T13:10:11.006Z"), "Bien'ici")
+        self.assertEqual(e["url"], "https://x/1")
+        self.assertTrue(e["title"].startswith("1000 € — 30 m² · 2 p. · 1 ch. · meublé · DPE C"))
+        self.assertEqual(e["thumbnail"], {"url": "https://p/1.jpg"})
+        self.assertEqual(e["footer"]["text"], "Bien'ici · Agence")
+        self.assertEqual(e["description"], "Paris 11e 75011")
+
+    def test_batches_of_ten_to_webhook(self):
+        import json, threading
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        from scraper import notify
+        received = []
+
+        class H(BaseHTTPRequestHandler):
+            def do_POST(self):
+                received.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
+                self.send_response(204); self.end_headers()
+            def log_message(self, *a): pass
+
+        srv = HTTPServer(("127.0.0.1", 0), H)
+        t = threading.Thread(target=srv.serve_forever, daemon=True); t.start()
+        try:
+            import os
+            os.environ["DISCORD_WEBHOOK_URL"] = f"http://127.0.0.1:{srv.server_port}/hook"
+            new = [mk(id=f"bienici:{i}", url=f"https://x/{i}") for i in range(25)]
+            sent = notify.notify_new(new, {"bienici": "Bien'ici"}, max_messages=20)
+        finally:
+            os.environ.pop("DISCORD_WEBHOOK_URL", None)
+            srv.shutdown()
+        self.assertEqual(sent, 20)
+        self.assertEqual([len(r.get("embeds", [])) for r in received], [10, 10, 0])
+        self.assertIn("5 autres", received[2]["content"])

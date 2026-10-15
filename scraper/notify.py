@@ -1,4 +1,4 @@
-"""filter.json matching (Jinka vocabulary) and Telegram delivery."""
+"""filter.json matching (Jinka vocabulary) and Discord webhook delivery."""
 from __future__ import annotations
 
 import json
@@ -69,10 +69,8 @@ def matches(l: Listing, f: dict) -> bool:
     return True
 
 
-def format_message(l: Listing, label: str) -> str:
+def _summary(l: Listing) -> str:
     bits = []
-    if l.rent is not None:
-        bits.append(f"{l.rent} €")
     if l.area is not None:
         bits.append(f"{l.area:g} m²")
     if l.rooms is not None:
@@ -83,38 +81,62 @@ def format_message(l: Listing, label: str) -> str:
         bits.append("meublé")
     if l.dpe:
         bits.append(f"DPE {l.dpe}")
+    return " · ".join(bits)
+
+
+def format_text(l: Listing, label: str) -> str:
+    """Plain-text fallback, used when no webhook is configured."""
+    rent = f"{l.rent} €" if l.rent is not None else "loyer n.c."
     place = " ".join(x for x in (l.city, l.postal_code) if x)
-    who = l.owner_type or ""
-    return f"🏠 <b>{' · '.join(bits)}</b>\n{place} — {label}{' · ' + who if who else ''}\n{l.url}"
+    who = f" · {l.owner_type}" if l.owner_type else ""
+    return f"{rent} · {_summary(l)} — {place} — {label}{who}\n{l.url}"
 
 
-def send_telegram(text: str, token: str, chat_id: str) -> bool:
-    resp = requests.post(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        json={"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": False},
-        timeout=30,
-    )
+def format_embed(l: Listing, label: str) -> dict:
+    """One Discord embed per listing: https://discord.com/developers/docs/resources/message#embed-object"""
+    rent = f"{l.rent} €" if l.rent is not None else "Loyer n.c."
+    if l.charges is not None:
+        rent += f" (dont {l.charges} € de charges)"
+    place = " ".join(x for x in (l.city, l.postal_code) if x)
+    embed = {
+        "title": f"{rent} — {_summary(l) or l.title}"[:256],
+        "url": l.url,
+        "description": place,
+        "footer": {"text": f"{label}{' · ' + l.owner_type if l.owner_type else ''}"},
+    }
+    if l.posted_at:
+        embed["timestamp"] = l.posted_at
+    if l.photos:
+        embed["thumbnail"] = {"url": l.photos[0]}
+    return embed
+
+
+def send_discord(embeds: list[dict], webhook_url: str) -> bool:
+    """POST up to 10 embeds in one webhook message."""
+    resp = requests.post(webhook_url, json={"embeds": embeds[:10]}, timeout=30)
     if not resp.ok:
-        log.error("telegram: %s %s", resp.status_code, resp.text[:200])
+        log.error("discord: %s %s", resp.status_code, resp.text[:200])
     return resp.ok
 
 
 def notify_new(new: list[Listing], labels: dict[str, str], max_messages: int = 20) -> int:
-    token, chat_id = os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
+    webhook = os.environ.get("DISCORD_WEBHOOK_URL")
     f = load_filter()
     hits = [l for l in new if matches(l, f)]
     log.info("notify: %d new listings, %d match filter.json", len(new), len(hits))
     if not hits:
         return 0
-    if not token or not chat_id:
-        log.warning("notify: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set; printing instead")
+    if not webhook:
+        log.warning("notify: DISCORD_WEBHOOK_URL not set; printing instead")
         for l in hits:
-            print(format_message(l, labels.get(l.source, l.source)).replace("<b>", "").replace("</b>", ""))
+            print(format_text(l, labels.get(l.source, l.source)))
         return 0
+    chosen = hits[:max_messages]
     sent = 0
-    for l in hits[:max_messages]:
-        if send_telegram(format_message(l, labels.get(l.source, l.source)), token, chat_id):
-            sent += 1
+    for i in range(0, len(chosen), 10):
+        batch = chosen[i:i + 10]
+        if send_discord([format_embed(l, labels.get(l.source, l.source)) for l in batch], webhook):
+            sent += len(batch)
     if len(hits) > max_messages:
-        send_telegram(f"… et {len(hits) - max_messages} autres nouvelles annonces, voir le site.", token, chat_id)
+        requests.post(webhook, json={"content": f"… et {len(hits) - max_messages} autres nouvelles annonces, voir le site."}, timeout=30)
     return sent

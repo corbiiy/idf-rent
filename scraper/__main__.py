@@ -19,7 +19,7 @@ def main(argv=None) -> int:
     p.add_argument("--pages", type=int, default=2, help="max list pages per department and source")
     p.add_argument("--no-liveness", action="store_true", help="skip re-checking stored links")
     p.add_argument("--no-photo-hash", action="store_true", help="skip downloading first photos for dedupe")
-    p.add_argument("--notify", action="store_true", help="send Telegram alerts for new listings matching filter.json")
+    p.add_argument("--notify", action="store_true", help="post new listings matching filter.json to the Discord webhook")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(levelname)s %(name)s: %(message)s")
