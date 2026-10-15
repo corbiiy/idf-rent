@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IDF Rent — nouvelles locations en Île-de-France</title>
+  <meta name="description" content="Agrégateur personnel d'annonces de location en Île-de-France, mis à jour toutes les 20 minutes.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <h1>IDF Rent</h1>
+      <p class="meta" id="meta" aria-live="polite">Chargement…</p>
+    </div>
+  </header>
+
+  <main class="layout">
+    <details class="filters" id="filters" open>
+      <summary>Filtres</summary>
+      <form id="filter-form" novalidate>
+        <fieldset>
+          <legend>Loyer (€/mois, charges comprises)</legend>
+          <div class="row">
+            <label>Min <input type="number" name="rent_min" min="0" step="50" inputmode="numeric" placeholder="ns"></label>
+            <label>Max <input type="number" name="rent_max" min="0" step="50" inputmode="numeric" placeholder="ns"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Surface (m²)</legend>
+          <div class="row">
+            <label>Min <input type="number" name="area_min" min="0" step="1" inputmode="numeric" placeholder="ns"></label>
+            <label>Max <input type="number" name="area_max" min="0" step="1" inputmode="numeric" placeholder="ns"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Pièces et chambres</legend>
+          <div class="row">
+            <label>Pièces
+              <select name="room_min">
+                <option value="ns">ns</option>
+                <option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option><option value="5">5+</option>
+              </select>
+            </label>
+            <label>Chambres
+              <select name="bedroom_min">
+                <option value="ns">ns</option>
+                <option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option><option value="5">5+</option>
+              </select>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Meublé</legend>
+          <div class="row radios">
+            <label><input type="radio" name="furnished" value="ns" checked> Indifférent</label>
+            <label><input type="radio" name="furnished" value="yes"> Oui</label>
+            <label><input type="radio" name="furnished" value="no"> Non</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Annonceur</legend>
+          <div class="row radios">
+            <label><input type="radio" name="owner_type" value="ns" checked> Indifférent</label>
+            <label><input type="radio" name="owner_type" value="Particulier"> Particulier</label>
+            <label><input type="radio" name="owner_type" value="Agence"> Agence</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>DPE (aucun coché = tous)</legend>
+          <div class="row chips" id="dpe-chips">
+            <label class="chip dpe-A"><input type="checkbox" name="dpe" value="A"> A</label>
+            <label class="chip dpe-B"><input type="checkbox" name="dpe" value="B"> B</label>
+            <label class="chip dpe-C"><input type="checkbox" name="dpe" value="C"> C</label>
+            <label class="chip dpe-D"><input type="checkbox" name="dpe" value="D"> D</label>
+            <label class="chip dpe-E"><input type="checkbox" name="dpe" value="E"> E</label>
+            <label class="chip dpe-F"><input type="checkbox" name="dpe" value="F"> F</label>
+            <label class="chip dpe-G"><input type="checkbox" name="dpe" value="G"> G</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Zone</legend>
+          <div class="depts" id="depts">
+            <label><input type="checkbox" name="dpts" value="75"> 75 Paris</label>
+            <label><input type="checkbox" name="dpts" value="77"> 77 Seine-et-Marne</label>
+            <label><input type="checkbox" name="dpts" value="78"> 78 Yvelines</label>
+            <label><input type="checkbox" name="dpts" value="91"> 91 Essonne</label>
+            <label><input type="checkbox" name="dpts" value="92"> 92 Hauts-de-Seine</label>
+            <label><input type="checkbox" name="dpts" value="93"> 93 Seine-Saint-Denis</label>
+            <label><input type="checkbox" name="dpts" value="94"> 94 Val-de-Marne</label>
+            <label><input type="checkbox" name="dpts" value="95"> 95 Val-d'Oise</label>
+          </div>
+          <label class="block">Codes postaux (séparés par des virgules)
+            <input type="text" name="postal_codes" inputmode="numeric" placeholder="75011, 92100" autocomplete="off">
+          </label>
+          <p class="hint">Aucun département ni code postal coché = toute l'Île-de-France.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Sources</legend>
+          <div class="row chips" id="sources"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Affichage</legend>
+          <label class="block"><input type="checkbox" name="only_new"> Seulement les nouveautés depuis ma dernière visite</label>
+          <label class="block"><input type="checkbox" name="show_expired"> Afficher les annonces expirées</label>
+          <label class="block">Tri
+            <select name="sort">
+              <option value="newest">Plus récentes d'abord</option>
+              <option value="rent_asc">Loyer croissant</option>
+              <option value="area_desc">Surface décroissante</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <div class="actions">
+          <button type="button" id="reset-filters">Réinitialiser</button>
+        </div>
+      </form>
+    </details>
+
+    <section class="results" aria-labelledby="results-title">
+      <h2 id="results-title" class="visually-hidden">Annonces</h2>
+      <p class="count" id="count" role="status"></p>
+      <ul class="cards" id="cards" role="list"></ul>
+      <p class="empty" id="empty" hidden>Aucune annonce ne correspond à ces filtres.</p>
+      <p class="error" id="error" role="alert" hidden></p>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>Données : annonces publiques collectées par un robot personnel. Chaque carte renvoie vers l'annonce d'origine.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
