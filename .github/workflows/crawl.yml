@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # to dispatch pages.yml after a data commit
 
 concurrency:
   group: crawl
@@ -52,3 +53,7 @@ jobs:
           # another run may have pushed meanwhile; rebase our single data commit on top
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
           git push origin "HEAD:${GITHUB_REF_NAME}"
+          # pushes made with GITHUB_TOKEN never trigger other workflows, so deploy explicitly
+          gh workflow run pages.yml --ref "${GITHUB_REF_NAME}"
+        env:
+          GH_TOKEN: ${{ github.token }}
