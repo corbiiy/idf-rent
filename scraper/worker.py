@@ -14,6 +14,7 @@ Environment:
   CRAWL_INTERVAL       seconds between crawls (default 300)
   PUSH_INTERVAL        min seconds between GitHub commits (default 900)
   CRAWL_PAGES          list pages per department and source (default 1)
+  CYCLE_BUDGET         seconds after which no further source is started in a cycle (default 240)
   DEPARTMENTS          comma list            (default all 8 IDF)
   SOURCES              comma list            (default all)
   DRY_RUN              "1": never push to GitHub
@@ -49,6 +50,7 @@ def main() -> int:
     interval = int(os.environ.get("CRAWL_INTERVAL", "300"))
     push_interval = int(os.environ.get("PUSH_INTERVAL", "900"))
     pages = int(os.environ.get("CRAWL_PAGES", "1"))
+    budget = float(os.environ.get("CYCLE_BUDGET", "240"))
     departments = env_list("DEPARTMENTS", ",".join(IDF_DEPARTMENTS))
     sources = env_list("SOURCES", ",".join(SOURCES))
     dry_run = os.environ.get("DRY_RUN") == "1"
@@ -78,6 +80,7 @@ def main() -> int:
             log.warning("could not sync from GitHub, using local copy: %s", exc)
 
     stored = store.load()
+    status = store.load_status()
     labels = {s: m.LABEL for s, m in SOURCES.items()}
     session = PoliteSession()
     last_push: float | None = None  # None: push right after the first cycle
@@ -86,10 +89,12 @@ def main() -> int:
     while True:
         started = time.monotonic()
         try:
-            stored, new, status = run_cycle(stored, session, departments, sources, pages=pages)
-            store.save(stored)
+            stored, new, status = run_cycle(stored, session, departments, sources, pages=pages,
+                                            status=status, budget=budget)
+            store.save(stored, status=status)
             dirty = True
-            log.info("cycle: %s; new=%d total=%d; next push in %ds", status, len(new), len(stored),
+            summary = ", ".join(f"{s}={st.get('count', 0)}{'!' if st.get('last_error') else ''}" for s, st in status.items())
+            log.info("cycle: %s; new=%d total=%d; next push in %ds", summary, len(new), len(stored),
                      0 if last_push is None else max(0, int(push_interval - (time.monotonic() - last_push))))
             if new:
                 notify_new(new, labels)

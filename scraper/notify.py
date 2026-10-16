@@ -34,7 +34,8 @@ def matches(l: Listing, f: dict) -> bool:
     owner_type: "Particulier" | "Agence" | "ns"
     dpe: list of accepted classes, e.g. ["A","B","C","D"]; [] = any
     where: {"dpts": ["75","92"], "postalCodes": ["75011"]}; both empty = anywhere
-    sources: list of source slugs; [] = any
+    sources: list of source slugs to include; [] = any
+    blocked_sources: list of source slugs to exclude (Jinka's "sources exclues")
     """
     if l.expired:
         return False
@@ -59,6 +60,8 @@ def matches(l: Listing, f: dict) -> bool:
     if f.get("dpe") and l.dpe not in f["dpe"]:
         return False
     if f.get("sources") and l.source not in f["sources"]:
+        return False
+    if l.source in (f.get("blocked_sources") or []):
         return False
     where = f.get("where") or {}
     dpts, pcs = where.get("dpts") or [], where.get("postalCodes") or []

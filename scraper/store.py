@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -13,28 +14,55 @@ from .sources import SOURCES
 
 log = logging.getLogger(__name__)
 
-DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "listings.json"
+DATA_FILE = Path(os.environ.get("IDF_RENT_DATA") or Path(__file__).resolve().parent.parent / "data" / "listings.json")
 
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-def load(path: Path = DATA_FILE) -> list[Listing]:
+def _read(path: Path) -> dict:
     if not path.exists():
-        return []
+        return {}
     with path.open(encoding="utf-8") as fh:
-        return [Listing.from_dict(d) for d in json.load(fh).get("listings", [])]
+        return json.load(fh)
 
 
-def save(listings: list[Listing], path: Path = DATA_FILE) -> None:
+def load(path: Path = DATA_FILE) -> list[Listing]:
+    return [Listing.from_dict(d) for d in _read(path).get("listings", [])]
+
+
+def load_status(path: Path = DATA_FILE) -> dict[str, dict]:
+    """Per-source crawl status as saved last time: {slug: {last_run, last_ok, last_error, count}}."""
+    out = {}
+    for slug, info in _read(path).get("sources", {}).items():
+        out[slug] = {k: info.get(k) for k in ("last_run", "last_ok", "last_error", "count")}
+    return out
+
+
+def save(listings: list[Listing], path: Path = DATA_FILE, status: dict[str, dict] | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    listings = sorted(listings, key=lambda l: (l.expired, l.first_seen or ""), reverse=False)
-    listings.sort(key=lambda l: l.first_seen or "", reverse=True)
+    listings = sorted(listings, key=lambda l: l.first_seen or "", reverse=True)
+    status = status or {}
+    counts: dict[str, int] = {}
+    for l in listings:
+        if not l.expired:
+            counts[l.source] = counts.get(l.source, 0) + 1
+    sources = {}
+    for slug, m in SOURCES.items():
+        st = status.get(slug, {})
+        sources[slug] = {
+            "label": m.LABEL,
+            "color": getattr(m, "COLOR", "#6b665d"),
+            "count": counts.get(slug, 0),
+            "last_run": st.get("last_run"),
+            "last_ok": st.get("last_ok"),
+            "last_error": st.get("last_error"),
+        }
     payload = {
         "generated_at": now_iso(),
         "count": len(listings),
-        "sources": {slug: {"label": m.LABEL} for slug, m in SOURCES.items()},
+        "sources": sources,
         "listings": [l.to_dict() for l in listings],
     }
     tmp = path.with_suffix(".json.tmp")

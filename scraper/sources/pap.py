@@ -26,6 +26,8 @@ log = logging.getLogger(__name__)
 
 SLUG = "pap"
 LABEL = "PAP"
+COLOR = "#d1312b"
+MIN_INTERVAL = 3600  # Cloudflare challenge is intermittent (2026-10): retry hourly, not every cycle
 BASE = "https://www.pap.fr"
 
 # department code -> (url slug, PAP geo id), ids from https://www.pap.fr/json/ac-geo?q=<dept>

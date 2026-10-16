@@ -10,5 +10,6 @@
   "owner_type": "ns",
   "dpe": [],
   "sources": [],
+  "blocked_sources": [],
   "where": { "dpts": ["75", "92", "93", "94"], "postalCodes": [] }
 }

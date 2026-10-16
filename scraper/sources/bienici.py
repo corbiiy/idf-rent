@@ -19,6 +19,7 @@ log = logging.getLogger(__name__)
 
 SLUG = "bienici"
 LABEL = "Bien'ici"
+COLOR = "#0f4c81"
 BASE = "https://www.bienici.com"
 PAGE_SIZE = 100
 

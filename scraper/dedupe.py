@@ -1,4 +1,5 @@
-"""Duplicate detection: by URL, and by (rent, area, postal_code, first-photo hash)."""
+"""Duplicate detection: by URL, by (rent, area, postal_code, first-photo hash), and by
+(rent, area, postal_code, rounded lat/lng) for the same agency ad syndicated to several sites."""
 from __future__ import annotations
 
 import hashlib
@@ -56,6 +57,14 @@ def same_photo(h1: Optional[str], h2: Optional[str], max_distance: int = 6) -> b
     return h1 == h2
 
 
+def geo_key(listing: Listing) -> Optional[tuple]:
+    """(rent, area, postal_code, lat, lng) rounded to ~100 m; None when the ad has no coordinates."""
+    fp = fingerprint(listing)
+    if fp is None or listing.lat is None or listing.lng is None:
+        return None
+    return fp + (round(listing.lat, 3), round(listing.lng, 3))
+
+
 def find_duplicate(listing: Listing, existing: list[Listing]) -> Optional[Listing]:
     """Return the stored listing that `listing` duplicates, if any."""
     for other in existing:
@@ -64,7 +73,12 @@ def find_duplicate(listing: Listing, existing: list[Listing]) -> Optional[Listin
     fp = fingerprint(listing)
     if fp is None:
         return None
+    gk = geo_key(listing)
     for other in existing:
-        if other.id != listing.id and fingerprint(other) == fp and same_photo(listing.photo_hash, other.photo_hash):
+        if other.id == listing.id or fingerprint(other) != fp:
+            continue
+        if same_photo(listing.photo_hash, other.photo_hash):
+            return other
+        if gk is not None and geo_key(other) == gk:
             return other
     return None

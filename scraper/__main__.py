@@ -22,6 +22,7 @@ def main(argv=None) -> int:
     p.add_argument("--no-photo-hash", action="store_true", help="skip downloading first photos for dedupe")
     p.add_argument("--notify", action="store_true", help="post new listings matching filter.json to the Discord webhook")
     p.add_argument("--notify-test", action="store_true", help="post the 3 most recent stored listings matching filter.json, to check the webhook")
+    p.add_argument("--force", action="store_true", help="ignore each source's MIN_INTERVAL (crawl PAP even if tried today)")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -37,9 +38,11 @@ def main(argv=None) -> int:
     stored = store.load()
     log.info("store: %d listings (%d expired)", len(stored), sum(l.expired for l in stored))
 
+    status = {} if args.force else store.load_status()
     stored, new_total, status = run_cycle(stored, session, departments, sources, pages=args.pages,
-                                          liveness=not args.no_liveness, hash_photos=not args.no_photo_hash)
-    store.save(stored)
+                                          liveness=not args.no_liveness, hash_photos=not args.no_photo_hash,
+                                          status=status)
+    store.save(stored, status=status)
     log.info("saved %d listings to %s", len(stored), store.DATA_FILE)
 
     labels = {s: m.LABEL for s, m in SOURCES.items()}
@@ -48,8 +51,9 @@ def main(argv=None) -> int:
     elif args.notify:
         notify_new(new_total, labels)
 
-    for slug, st in status.items():
-        print(f"{slug}: {st}")
+    for slug in sources:
+        st = status.get(slug) or {}
+        print(f"{slug}: {'error ' + st['last_error'] if st.get('last_error') else 'ok'} (count {st.get('count', 0)})")
     print(f"new: {len(new_total)}, total: {len(stored)}")
     return 0
 
