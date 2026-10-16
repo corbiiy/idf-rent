@@ -76,7 +76,7 @@ def main() -> int:
     stored = store.load()
     labels = {s: m.LABEL for s, m in SOURCES.items()}
     session = PoliteSession()
-    last_push = 0.0
+    last_push: float | None = None  # None: push right after the first cycle
     dirty = False
 
     while True:
@@ -85,13 +85,15 @@ def main() -> int:
             stored, new, status = run_cycle(stored, session, departments, sources, pages=pages)
             store.save(stored)
             dirty = True
-            log.info("cycle: %s; new=%d total=%d", status, len(new), len(stored))
+            log.info("cycle: %s; new=%d total=%d; next push in %ds", status, len(new), len(stored),
+                     0 if last_push is None else max(0, int(push_interval - (time.monotonic() - last_push))))
             if new:
                 notify_new(new, labels)
         except Exception as exc:
             log.exception("cycle failed: %s", exc)
 
-        if dirty and gh is not None and not dry_run and time.monotonic() - last_push >= push_interval:
+        due = last_push is None or time.monotonic() - last_push >= push_interval
+        if dirty and gh is not None and not dry_run and due:
             try:
                 stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
                 sha = gh.upload(store.DATA_FILE.read_bytes(), f"data: crawl {stamp} (railway)")
