@@ -101,7 +101,12 @@ def main() -> int:
                 last_push = time.monotonic()
                 dirty = False
             except requests.RequestException as exc:
-                log.warning("push failed, will retry next cycle: %s", exc)
+                detail = ""
+                if exc.response is not None:
+                    detail = " " + exc.response.text.strip()[:200]
+                    if exc.response.status_code in (401, 403, 404):
+                        detail += " (check GITHUB_TOKEN: fine-grained token, repository idf-rent, Contents: read and write)"
+                log.warning("push failed, will retry next cycle: %s%s", exc, detail)
 
         if once:
             return 0
