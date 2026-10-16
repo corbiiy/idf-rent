@@ -191,7 +191,10 @@
   const fmtShort = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   function buildSourceList(sources) {
-    const rows = Object.entries(sources).sort((a, b) => (b[1].count || 0) - (a[1].count || 0)).map(([slug, info]) => {
+    const counted = {};
+    for (const l of listings) if (!l.expired) counted[l.source] = (counted[l.source] || 0) + 1;
+    const rows = Object.entries(sources).map(([slug, info]) => [slug, { ...info, count: info.count ?? counted[slug] ?? 0 }])
+      .sort((a, b) => b[1].count - a[1].count).map(([slug, info]) => {
       const badge = el("span", { class: "source", text: info.label || slug });
       badge.style.background = info.color || "";
       let state, stateText;
