@@ -11,7 +11,7 @@ The mechanism mirrors what the Jinka app does server-side (one normalised schema
 
 ## Sources
 
-Twelve modules in `scraper/sources/`, one per site, all reading public search pages with a plain user agent and the rules below. Status on 2026-10-16; the live per-source status (count, last success, last error) is in the `sources` block of `data/listings.json` and shown on the site.
+Thirteen modules in `scraper/sources/`, one per site, all reading public search pages with a plain user agent and the rules below. Status on 2026-10-16; the live per-source status (count, last success, last error) is in the `sources` block of `data/listings.json` and shown on the site.
 
 | slug | site | kind | how | status |
 |---|---|---|---|---|
@@ -27,8 +27,9 @@ Twelve modules in `scraper/sources/`, one per site, all reading public search pa
 | `century21` | [Century 21](https://www.century21.fr) | agency network | HTML list per department and kind (`/annonces/location-<kind>/d-<dept>/page-N/`); one ad-page GET per never-seen ad outside Paris to get the postal code | working |
 | `lodgis` | [Lodgis](https://www.lodgis.com) | furnished rentals, Paris only | 20 arrondissement category pages (`?p=N`), hourly | working |
 | `arthurimmo` | [Arthurimmo](https://www.arthurimmo.com) | agency network | region page `/immobilier/location/immo-ile-de-france/bien-<kind>?sort=-created_at&page=N` (2.5 MB pages), every 30 min | working |
+| `orpi` | [Orpi](https://www.orpi.com) | agency network | the search page embeds the whole department result set as JSON (`data-result` attribute); one GET per department, every 30 min | working |
 
-Per-field coverage differs by site: DPE comes from Bien'ici, PAP, Paruvendu, ERA, Foncia; coordinates from Bien'ici, ERA, L'Adresse; posting dates from Bien'ici, ERA, Foncia, Paruvendu (last-update date). Agency-network ads are tagged `owner_type: Agence`, LocService and PAP `Particulier`, Paruvendu per card.
+Per-field coverage differs by site: DPE comes from Bien'ici, PAP, Paruvendu, ERA, Foncia; coordinates from Bien'ici, ERA, L'Adresse, Orpi; posting dates from Bien'ici, ERA, Foncia, Orpi, Paruvendu (last-update date). Agency-network ads are tagged `owner_type: Agence`, LocService and PAP `Particulier`, Paruvendu per card.
 
 Adding a source is one module exposing `SLUG`, `LABEL`, `COLOR`, optional `MIN_INTERVAL`, `fetch()` and `is_live()` (see `scraper/sources/__init__.py`), a trimmed fixture under `tests/fixtures/` and a unittest. Modules are discovered automatically; a failing or blocked source records `last_error` in the status block and never stops the others.
 
@@ -40,12 +41,20 @@ Adding a source is one module exposing `SLUG`, `LABEL`, `COLOR`, optional `MIN_I
 
 ### Surveyed on 2026-10-16 and not implemented
 
+Each of these was re-checked in a real browser to see which endpoint its own front end calls, and that endpoint was then tried with a plain client. Nothing here is worked around: a site that only answers a browser stays out.
+
 | site | why not |
 |---|---|
-| Figaro Immobilier, AvendreAlouer, Efficity, Maisons & Appartements | HTTP 403 / Cloudflare or CloudFront challenge for any non-browser client |
+| Figaro Immobilier | Cloudflare managed challenge on every path (even `robots.txt`) for non-browser clients |
+| AvendreAlouer | DataDome bot protection |
+| Efficity | challenge for non-browser clients, `robots.txt` forbids our client, and the rental page redirects to an agent directory |
+| Maisons & Appartements | Cloudflare "verifying your browser" interstitial, shown even to a real browser |
+| Stéphane Plaza, Sixième Avenue | listings come from a `/search-goods` JSON call that Cloudflare's WAF answers with 403 for non-browsers; inventories are 1 and 2 rentals in Paris anyway |
+| Guy Hoquet | hash-routed search app whose results never appear as an observable request (only a location autocomplete); no server-side list |
+| Nestenn | the only result page, `/listing`, is disallowed by `robots.txt`; the static `/location-appartement` pages show six featured ads nationwide |
+| Breteuil | site unreachable (also from a browser) |
 | Ouest-France Immo | `robots.txt` disallows `/louer/` and `/annonce/`; little IDF stock anyway |
 | Barnes, Emile Garcin, Engel & Völkers | `robots.txt` disallows their search pages, or listings load only client-side; luxury segment |
-| Orpi, Nestenn, Guy Hoquet, Stéphane Plaza, Sixième Avenue, Breteuil | search results rendered only in the browser (JavaScript apps, no server-side list, no public JSON found without reverse-engineering their front end) |
 | Studapart, Immojeune | public pages list student residences, not individual ads |
 | Flatlooker (now Manda), SuperImmo | no public listing index found |
 | Colonies, Daniel Féau | site unreachable |
