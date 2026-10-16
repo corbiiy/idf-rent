@@ -1,6 +1,7 @@
 """One crawl cycle, shared by the CLI (python -m scraper) and the long-running worker."""
 from __future__ import annotations
 
+import inspect
 import logging
 import time
 from datetime import datetime, timezone
@@ -55,8 +56,12 @@ def run_cycle(stored: list[Listing], session: PoliteSession, departments: list[s
         st = status.setdefault(slug, {})
         st["last_run"] = store.now_iso()
         fresh: list[Listing] = []
+        kwargs = {}
+        if "known_ids" in inspect.signature(mod.fetch).parameters:
+            # lets a module fetch a detail page only for ads it has never seen
+            kwargs["known_ids"] = {l.id for l in stored if l.source == slug}
         try:
-            for l in mod.fetch(session, departments, max_pages=pages):
+            for l in mod.fetch(session, departments, max_pages=pages, **kwargs):
                 fresh.append(l)
             st["last_ok"] = st["last_run"]
             st["last_error"] = None

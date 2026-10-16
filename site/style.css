@@ -88,8 +88,17 @@ button:hover { border-color: var(--muted); }
 .chip.dpe-E:has(input:checked) { background: #efa12c; border-color: #efa12c; color: #1f1d1a; }
 .chip.dpe-F:has(input:checked) { background: #e5662b; border-color: #e5662b; color: #fff; }
 .chip.dpe-G:has(input:checked) { background: #c9282d; border-color: #c9282d; color: #fff; }
-.source { font-size: 0.75rem; font-weight: 600; padding: 2px var(--space-2); border-radius: 3px; color: #fff; background: var(--muted); }
-.source-bienici { background: #0f4c81; } .source-pap { background: #d1312b; }
+.source { font-size: 0.75rem; font-weight: 600; padding: 2px var(--space-2); border-radius: 3px; color: #fff; background: var(--muted); white-space: nowrap; }
+.sources { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.source-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: 0.8125rem; }
+.source-row label { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+.source-row input { margin: 0; }
+.source-count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.source-state { font-size: 0.6875rem; color: var(--muted); max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-state::before { content: "●"; margin-right: 4px; }
+.source-state.is-ok::before { color: var(--new); }
+.source-state.is-err::before { color: var(--accent); }
+.source-state.is-none::before { color: var(--border); }
 .badge-new { position: absolute; top: var(--space-2); left: var(--space-2); background: var(--new); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 2px var(--space-2); border-radius: 3px; }
 .badge-expired { position: absolute; top: var(--space-2); left: var(--space-2); background: var(--muted); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 2px var(--space-2); border-radius: 3px; }
 .card .when { font-size: 0.75rem; color: var(--muted); margin: 0; }

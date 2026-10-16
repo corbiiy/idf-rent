@@ -11,25 +11,53 @@ The mechanism mirrors what the Jinka app does server-side (one normalised schema
 
 ## Sources
 
-| slug | site | how | status |
-|---|---|---|---|
-| `bienici` | [Bien'ici](https://www.bienici.com) | public JSON endpoint its own front end uses (`/realEstateAds.json`, `/realEstateAd.json`) | working |
-| `pap` | [PAP](https://www.pap.fr) | HTML list pages (`search-list-item-alt` cards) | **blocked**: pap.fr serves a Cloudflare JavaScript challenge (HTTP 403, `cf-mitigated: challenge`) to every non-browser client, including `robots.txt` and the sitemaps. The module stops on the 403 and the run continues with the other sources. The parser is kept and unit-tested against a saved fixture so it works the day PAP exposes its pages or an RSS feed to plain clients again. |
+Twelve modules in `scraper/sources/`, one per site, all reading public search pages with a plain user agent and the rules below. Status on 2026-10-16; the live per-source status (count, last success, last error) is in the `sources` block of `data/listings.json` and shown on the site.
+
+| slug | site | kind | how | status |
+|---|---|---|---|---|
+| `bienici` | [Bien'ici](https://www.bienici.com) | portal | public JSON endpoint its front end uses (`/realEstateAds.json`), per department | working |
+| `locservice` | [LocService](https://www.locservice.fr) | private owners | HTML list per department (`/<dept>/location-<name>.html`, `-pN`) | working |
+| `paruvendu` | [Paruvendu](https://www.paruvendu.fr) | portal, owners and agencies | HTML list per department and kind (`?p=N`); one ad-page GET per never-seen ad outside Paris to get the postal code | working |
+| `pap` | [PAP](https://www.pap.fr) | private owners | HTML list per department (`-g<id>-N`) | intermittent: Cloudflare challenge (HTTP 403) on most requests; retried hourly, stops cleanly on 403 |
+| `era` | [ERA](https://www.eraimmobilier.com) | agency network | Angular transfer state embedded in `/location-<kind>/ile-de-france-1/<dept>` | working |
+| `foncia` | [Foncia](https://fr.foncia.com) | agency network | Angular transfer state embedded in `/location/<dept>/page-N` (no query strings: robots.txt forbids them) | working |
+| `ladresse` | [L'Adresse](https://www.ladresse.com) | agency network | HTML list per department and kind (`/recherche/location/<kind>/<dept>/N`), lat/lng from the map script | working |
+| `iad` | [iad France](https://www.iadfrance.fr) | mandataire network | HTML list per department (`/annonces/<dept>/location?page=N`) | working |
+| `laforet` | [Laforêt](https://www.laforet.com) | agency network | national HTML list (`/louer/location-<kind>?page=N`), newest first, filtered to IDF postal codes | working |
+| `century21` | [Century 21](https://www.century21.fr) | agency network | HTML list per department and kind (`/annonces/location-<kind>/d-<dept>/page-N/`); one ad-page GET per never-seen ad outside Paris to get the postal code | working |
+| `lodgis` | [Lodgis](https://www.lodgis.com) | furnished rentals, Paris only | 20 arrondissement category pages (`?p=N`), hourly | working |
+| `arthurimmo` | [Arthurimmo](https://www.arthurimmo.com) | agency network | region page `/immobilier/location/immo-ile-de-france/bien-<kind>?sort=-created_at&page=N` (2.5 MB pages), every 30 min | working |
+
+Per-field coverage differs by site: DPE comes from Bien'ici, PAP, Paruvendu, ERA, Foncia; coordinates from Bien'ici, ERA, L'Adresse; posting dates from Bien'ici, ERA, Foncia, Paruvendu (last-update date). Agency-network ads are tagged `owner_type: Agence`, LocService and PAP `Particulier`, Paruvendu per card.
+
+Adding a source is one module exposing `SLUG`, `LABEL`, `COLOR`, optional `MIN_INTERVAL`, `fetch()` and `is_live()` (see `scraper/sources/__init__.py`), a trimmed fixture under `tests/fixtures/` and a unittest. Modules are discovered automatically; a failing or blocked source records `last_error` in the status block and never stops the others.
 
 ### Excluded on purpose
 
-- **Leboncoin** and **SeLoger**: protected by DataDome bot detection, and their terms of service forbid automated access. Working around bot detection is not something this project does.
-- **Jinka's own API** (`api.jinka.fr`): private API behind user tokens; reusing it would be both against their terms and pointless (the point is to have our own feed).
+- **Leboncoin** and the **SeLoger group** (SeLoger, Logic-Immo, Belles Demeures): court-protected databases (rulings against Jinka in December 2025 and April 2026), DataDome-guarded, and their terms forbid automated access. Not crawled, not proxied.
+- **Jinka's own API** (`api.jinka.fr`): private, behind user tokens.
 - Anything a site's `robots.txt` disallows for our user agent.
 
-Agency networks (Orpi, Century 21, Foncia, …) are the natural next sources: each needs one module in `scraper/sources/` exposing `SLUG`, `LABEL`, `fetch()` and `is_live()`.
+### Surveyed on 2026-10-16 and not implemented
+
+| site | why not |
+|---|---|
+| Figaro Immobilier, AvendreAlouer, Efficity, Maisons & Appartements | HTTP 403 / Cloudflare or CloudFront challenge for any non-browser client |
+| Ouest-France Immo | `robots.txt` disallows `/louer/` and `/annonce/`; little IDF stock anyway |
+| Barnes, Emile Garcin, Engel & Völkers | `robots.txt` disallows their search pages, or listings load only client-side; luxury segment |
+| Orpi, Nestenn, Guy Hoquet, Stéphane Plaza, Sixième Avenue, Breteuil | search results rendered only in the browser (JavaScript apps, no server-side list, no public JSON found without reverse-engineering their front end) |
+| Studapart, Immojeune | public pages list student residences, not individual ads |
+| Flatlooker (now Manda), SuperImmo | no public listing index found |
+| Colonies, Daniel Féau | site unreachable |
+| Gens de confiance | members only |
 
 ## Crawler etiquette
 
 - One plain, identifiable user agent (`scraper/http.py`).
 - `robots.txt` is fetched once per host and respected.
-- A fixed delay between requests (1.5 s), at most two list pages per department and source per run.
+- A fixed delay between requests (1.5 s), at most two list pages per department and source per run (one on Railway).
 - **HTTP 403 or 429 stops that source for the run. No retries, no header spoofing, no challenge solving.**
+- Each cycle has a time budget (`CYCLE_BUDGET`, 240 s on Railway): sources are crawled least-recently-run first and the ones not reached go first next cycle, so twelve sources fit a 5-minute loop without hammering anyone. Heavy or flaky sources declare a `MIN_INTERVAL` (PAP and Lodgis hourly, Arthurimmo every 30 min).
 - Photos are fetched only once per new ad, to compute a perceptual hash for cross-source dedupe.
 
 ## Data model
@@ -51,7 +79,7 @@ Agency networks (Orpi, Century 21, Foncia, …) are the natural next sources: ea
 
 `rent` is the monthly rent charges included; `owner_type` is `Particulier` or `Agence`; `dpe` is `A`–`G`.
 
-Deduplication: by URL, then by `(rent, int(area), postal_code)` plus a matching first-photo dHash (Hamming distance ≤ 6).
+Deduplication: by URL, then by `(rent, int(area), postal_code)` plus either a matching first-photo dHash (Hamming distance ≤ 6) or matching coordinates rounded to ~100 m, which catches the same agency ad syndicated to several networks and portals.
 
 Liveness: each run re-checks up to 60 stored ads not seen in the last 6 hours. HTTP 404/410 (or Bien'ici's `onTheMarket: false`) marks the ad `expired`. Expired ads are kept 14 days so the site can show them greyed out, then pruned.
 
@@ -75,7 +103,7 @@ python3 -m http.server 8765                          # then open http://127.0.0.
    - In Discord, open the target channel → Edit channel → Integrations → Webhooks → New webhook → Copy webhook URL.
    - Save it as the repository secret `DISCORD_WEBHOOK_URL`.
    Without this secret the workflow still runs; matching listings are printed in the job log instead. Each run posts at most 20 listings (10 embeds per message, each with photo, rent, specs, place and the link to the original ad) plus a one-line count of the rest.
-5. Edit `filter.json` to taste (same keys as the site's filters: `rent_min`, `rent_max`, `area_min`, `area_max`, `room_min`, `bedroom_min`, `furnished` yes/no/ns, `owner_type` Particulier/Agence/ns, `dpe` list, `sources` list, `where.dpts` department codes, `where.postalCodes`). `"ns"` or a missing key means not specified.
+5. Edit `filter.json` to taste (same keys as the site's filters: `rent_min`, `rent_max`, `area_min`, `area_max`, `room_min`, `bedroom_min`, `furnished` yes/no/ns, `owner_type` Particulier/Agence/ns, `dpe` list, `sources` include list, `blocked_sources` exclude list (Jinka's "sources exclues"), `where.dpts` department codes, `where.postalCodes`). `"ns"` or a missing key means not specified.
 6. Run the crawl once by hand: Actions → *Crawl rentals* → *Run workflow* (tick *test_alert* to post the 3 latest matches and check the webhook).
 
 ## Running the crawler on Railway (every 5 minutes)
@@ -96,7 +124,7 @@ Why not crawl faster than 5 minutes: Bien'ici publishes a few hundred Île-de-Fr
 
 ## Site
 
-`site/index.html` + `app.js` + `style.css`, no build step. On GitHub Pages the page fetches `data/listings.json` from the `data` branch via `raw.githubusercontent.com` (fresh within about 5 minutes of a commit), so the site only redeploys when `site/` changes; on a local server it reads the file from the checkout. Filters: rent and area min/max, rooms and bedrooms minimum (`1+`…`5+`), furnished, owner type, DPE classes, zone picker over the 8 IDF departments plus free postal codes, sources, sort. The filter is saved in `localStorage`. The page also stores the timestamp of your last visit and marks listings first seen after it with a **Nouveau** badge (and a "only new" toggle). Each card shows the source label and links to the original ad.
+`site/index.html` + `app.js` + `style.css`, no build step. On GitHub Pages the page fetches `data/listings.json` from the `data` branch via `raw.githubusercontent.com` (fresh within about 5 minutes of a commit), so the site only redeploys when `site/` changes; on a local server it reads the file from the checkout. Filters: rent and area min/max, rooms and bedrooms minimum (`1+`…`5+`), furnished, owner type, DPE classes, zone picker over the 8 IDF departments plus free postal codes, sort. The sources panel lists every source with its active count and last crawl status; unticking one excludes it (saved locally). The filter is saved in `localStorage`. The page also stores the timestamp of your last visit and marks listings first seen after it with a **Nouveau** badge (and a "only new" toggle). Each card shows the source label and links to the original ad.
 
 ## Layout
 
@@ -104,7 +132,7 @@ Why not crawl faster than 5 minutes: Bien'ici publishes a few hundred Île-de-Fr
 scraper/            Python package (python -m scraper)
   model.py          Listing dataclass, IDF departments
   http.py           PoliteSession: user agent, robots.txt, delay, stop on 403/429
-  sources/          one module per source (bienici.py, pap.py)
+  sources/          one module per source (12 sites, auto-discovered)
   dedupe.py         URL + fingerprint + photo dHash
   store.py          load/merge/liveness/prune/save data/listings.json
   notify.py         filter.json matching and Discord webhook

@@ -23,6 +23,7 @@
 
   let listings = [];
   let sourceLabels = {};
+  let sourceInfo = {};
   let lastVisit = null;
 
   function readStorage(key) {
@@ -46,7 +47,7 @@
         dpts: fd.getAll("dpts"),
         postalCodes: String(fd.get("postal_codes") || "").split(/[\s,;]+/).filter((s) => /^\d{5}$/.test(s)),
       },
-      sources: fd.getAll("sources"),
+      blocked_sources: [...form.querySelectorAll('input[name="sources"]')].filter((c) => !c.checked).map((c) => c.value),
       only_new: fd.get("only_new") === "on",
       show_expired: fd.get("show_expired") === "on",
       sort: fd.get("sort") || "newest",
@@ -65,7 +66,7 @@
     form.querySelectorAll('input[name="dpe"]').forEach((c) => { c.checked = (f.dpe || []).includes(c.value); });
     form.querySelectorAll('input[name="dpts"]').forEach((c) => { c.checked = ((f.where || {}).dpts || []).includes(c.value); });
     form.elements.postal_codes.value = ((f.where || {}).postalCodes || []).join(", ");
-    form.querySelectorAll('input[name="sources"]').forEach((c) => { c.checked = (f.sources || []).includes(c.value); });
+    form.querySelectorAll('input[name="sources"]').forEach((c) => { c.checked = !(f.blocked_sources || []).includes(c.value); });
     form.elements.only_new.checked = !!f.only_new;
     form.elements.show_expired.checked = !!f.show_expired;
   }
@@ -87,7 +88,7 @@
     if (f.furnished === "no" && l.furnished === true) return false;
     if (!ns(f.owner_type) && l.owner_type !== f.owner_type) return false;
     if (f.dpe.length && !f.dpe.includes(l.dpe)) return false;
-    if (f.sources.length && !f.sources.includes(l.source)) return false;
+    if (f.blocked_sources.includes(l.source)) return false;
     const { dpts, postalCodes } = f.where;
     if (dpts.length || postalCodes.length) {
       const pc = l.postal_code || "";
@@ -129,7 +130,9 @@
     if (l.furnished === true) tags.push(el("span", { class: "tag", text: "Meublé" }));
     if (l.furnished === false) tags.push(el("span", { class: "tag", text: "Non meublé" }));
     if (l.owner_type) tags.push(el("span", { class: "tag", text: l.owner_type }));
-    tags.push(el("span", { class: `source source-${l.source}`, text: label }));
+    const srcBadge = el("span", { class: "source", text: label });
+    srcBadge.style.background = (sourceInfo[l.source] || {}).color || "";
+    tags.push(srcBadge);
 
     const photo = l.photos && l.photos[0]
       ? el("img", { class: "photo", src: l.photos[0], alt: "", loading: "lazy", referrerpolicy: "no-referrer" })
@@ -185,15 +188,31 @@
     throw lastErr || new Error("listings.json introuvable");
   }
 
-  function buildSourceChips(sources) {
-    sourcesEl.replaceChildren(...Object.entries(sources).map(([slug, info]) =>
-      el("label", { class: "chip" }, [el("input", { type: "checkbox", name: "sources", value: slug }), text(" " + (info.label || slug))])
-    ));
+  const fmtShort = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+  function buildSourceList(sources) {
+    const rows = Object.entries(sources).sort((a, b) => (b[1].count || 0) - (a[1].count || 0)).map(([slug, info]) => {
+      const badge = el("span", { class: "source", text: info.label || slug });
+      badge.style.background = info.color || "";
+      let state, stateText;
+      if (info.last_error) { state = "err"; stateText = `erreur · ${info.last_error}`; }
+      else if (info.last_ok) { state = "ok"; stateText = `ok · ${fmtShort.format(new Date(info.last_ok))}`; }
+      else { state = "none"; stateText = "jamais collectée"; }
+      return el("li", { class: "source-row" }, [
+        el("label", {}, [
+          el("input", { type: "checkbox", name: "sources", value: slug, checked: "" }),
+          badge,
+          el("span", { class: "source-count", text: String(info.count || 0) }),
+        ]),
+        el("span", { class: `source-state is-${state}`, title: stateText, text: stateText }),
+      ]);
+    });
+    sourcesEl.replaceChildren(...rows);
   }
 
   document.getElementById("reset-filters").addEventListener("click", () => {
     form.reset();
-    form.querySelectorAll('input[name="sources"]').forEach((c) => { c.checked = false; });
+    form.querySelectorAll('input[name="sources"]').forEach((c) => { c.checked = true; });
     render();
   });
   form.addEventListener("input", render);
@@ -206,8 +225,9 @@
 
   loadData().then((data) => {
     listings = data.listings || [];
-    sourceLabels = Object.fromEntries(Object.entries(data.sources || {}).map(([k, v]) => [k, v.label || k]));
-    buildSourceChips(data.sources || {});
+    sourceInfo = data.sources || {};
+    sourceLabels = Object.fromEntries(Object.entries(sourceInfo).map(([k, v]) => [k, v.label || k]));
+    buildSourceList(sourceInfo);
     writeForm(readStorage(STORAGE_FILTER));
     const gen = data.generated_at ? fmtDate.format(new Date(data.generated_at)) : "?";
     metaEl.textContent = `${listings.length} annonces · mis à jour ${gen}`;

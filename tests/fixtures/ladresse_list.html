@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html><head><title>Location appartements en Île-de-France</title></head><body>
+<div class="compteur">283 annonces trouvées </div>
+<div class="biens">
+<ul>
+<li>
+						<a href="/annonce/location/appartement/chelles-77500/14658060" class="bien" data-id="14658060">
+							<div class="bien-photo"><img src="https://admin.exceladresse.com/office7/ladresseAc3-509/catalog/images/pr_p/1/4/6/5/8/0/6/0/14658060a.jpg?version=1792143838" alt="Appartement CHELLES (77500) 3 pi&egrave;ces 60.00 m&sup2;" />
+	<span class="bien-geo">
+		<i class="fas fa-fw fa-map-marker-alt"></i> 
+		Chelles (77)	</span>
+
+	</div>
+
+<div class="bien-detail">
+	<div class="bien-prix">1 313 € <span class='small'>/ mois cc</span></div>
+	<div class="bien-type">Appartement</div>
+</div>
+
+<div class="bien-description">
+		<span class="highlight">
+		3 pièces		, 2 chambres		<br />		60.00 m²	</span><br />
+		Avec balcon	</div>
+<button class="bouton">Voir le bien</button>
+						</a>
+											</li>
+<li>
+						<a href="/annonce/location/appartement/les-ulis-91940/14657983" class="bien" data-id="14657983">
+							<div class="bien-photo"><img src="https://admin.exceladresse.com/office21/ladresseorsay_250625/catalog/images/pr_p/1/4/6/5/7/9/8/3/14657983a.jpg?version=1792137408" alt="Appartement LES ULIS (91940) 1 pi&egrave;ce 10.00 m&sup2;" />
+	<span class="bien-geo">
+		<i class="fas fa-fw fa-map-marker-alt"></i> 
+		Les Ulis (91)	</span>
+
+	</div>
+
+<div class="bien-detail">
+	<div class="bien-prix">550 € <span class='small'>/ mois cc</span></div>
+	<div class="bien-type">Appartement</div>
+</div>
+
+<div class="bien-description">
+		<span class="highlight">
+		1 pièce		, 1 chambre		<br />		10.00 m²	</span><br />
+		Meublé<br>Avec balcon	</div>
+<button class="bouton">Voir le bien</button>
+						</a>
+											</li>
+<li>
+						<a href="/annonce/location/appartement/paris-75007/14657364" class="bien" data-id="14657364">
+							<div class="bien-photo"><img src="https://admin.exceladresse.com/office5/ladresseparis7_020625/catalog/images/pr_p/1/4/6/5/7/3/6/4/14657364a.jpg?version=1791992643" alt="Appartement PARIS (75007) 3 pi&egrave;ces 52.00 m&sup2;" />
+	<span class="bien-geo">
+		<i class="fas fa-fw fa-map-marker-alt"></i> 
+		Paris 07 (75)	</span>
+
+	<span class="bien-exclusif">Exclusif</span></div>
+
+<div class="bien-detail">
+	<div class="bien-prix">2 100 € <span class='small'>/ mois cc</span></div>
+	<div class="bien-type">Appartement</div>
+</div>
+
+<div class="bien-description">
+		<span class="highlight">
+		3 pièces		, 2 chambres		<br />		52.00 m²	</span><br />
+			</div>
+<button class="bouton">Voir le bien</button>
+						</a>
+											</li>
+</ul>
+<div class='pagination'><a class='disable'><i class='fas fa-fw fa-angle-left'></i></a><a href='/recherche/location/appartement/ile-de-france' class='select'>1</a><a href='/recherche/location/appartement/ile-de-france/2'>2</a></div>
+</div>
+<div id="annonces-map"></div>
+<script>
+if($("#annonces-map").length > 0)
+{
+var markers = new Object();
+var bounds = [];
+var map = L.map('annonces-map', { gestureHandling: true }).setView([48.8753,2.59009], 15);
+markers[0] = L.marker([48.876363815581,2.5888262874132], {			    
+			    icon: new L.DivIcon({
+			        className: 'leaflet-icon',
+			        html: '<span id="annonce-14658060"><img src="/img/map-marker-icon.png"/>'+
+			              '<span>1 313 € <small>/ mois  cc</small></span></span>'
+			    })
+			}).addTo(map);
+			bounds.push([48.876363815581,2.5888262874132]);
+
+			var pop = L.popup({ autoClose:false, closeOnClick:false }).setContent("<a href='/annonce/location/appartement/chelles-77500/14658060'><div class='row'><div class='col-5'><img src='https://admin.exceladresse.com/office7/ladresseAc3-509/catalog/images/pr_p/1/4/6/5/8/0/6/0/14658060a.jpg?version=1792143838' alt='Appartement 3 pi&egrave;ces 60.00 m&sup2;' /></div><div class='col-7'><div><b>Appartement 3 pièces 60.00 m²</b></div><div class='right'><span class='highlight'>1 313 € <small>/ mois  cc</small></span></div></div></div></a>");
+			markers[0].bindPopup(pop);
+			markers[0].on("mouseover", function()
+			{
+				circles[0] = L.circle(markers[0].getLatLng(), 150, {
+					color: '#008890',
+					fillColor:'#008890',
+					fillOpacity: 0.5,
+				}).addTo(map);
+			}).on("mouseout", function()
+			{
+				map.removeLayer(circles[0]);
+			}).on("click", function()
+			{
+				this.openPopup();
+			});
+markers[2] = L.marker([48.689266212756,2.1728643358754], {			    
+			    icon: new L.DivIcon({
+			        className: 'leaflet-icon',
+			        html: '<span id="annonce-14657983"><img src="/img/map-marker-icon.png"/>'+
+			              '<span>550 € <small>/ mois  cc</small></span></span>'
+			    })
+			}).addTo(map);
+			bounds.push([48.689266212756,2.1728643358754]);
+
+			var pop = L.popup({ autoClose:false, closeOnClick:false }).setContent("<a href='/annonce/location/appartement/les-ulis-91940/14657983'><div class='row'><div class='col-5'><img src='https://admin.exceladresse.com/office21/ladresseorsay_250625/catalog/images/pr_p/1/4/6/5/7/9/8/3/14657983a.jpg?version=1792137408' alt='Appartement 1 pi&egrave;ce 10.00 m&sup2;' /></div><div class='col-7'><div><b>Appartement 1 pièce 10.00 m²</b></div><div class='right'><span class='highlight'>550 € <small>/ mois  cc</small></span></div></div></div></a>");
+			markers[2].bindPopup(pop);
+			markers[2].on("mouseover", function()
+			{
+				circles[2] = L.circle(markers[2].getLatLng(), 150, {
+					color: '#008890',
+					fillColor:'#008890',
+					fillOpacity: 0.5,
+				}).addTo(map);
+			}).on("mouseout", function()
+			{
+				map.removeLayer(circles[2]);
+			}).on("click", function()
+			{
+				this.openPopup();
+			});
+markers[3] = L.marker([48.8513,2.31045], {			    
+			    icon: new L.DivIcon({
+			        className: 'leaflet-icon',
+			        html: '<span id="annonce-14657364"><img src="/img/map-marker-exclu-icon.png"/>'+
+			              '<span>2 100 € <small>/ mois  cc</small></span></span>'
+			    })
+			}).addTo(map);
+			bounds.push([48.8513,2.31045]);
+
+			var pop = L.popup({ autoClose:false, closeOnClick:false }).setContent("<a href='/annonce/location/appartement/paris-75007/14657364' class='exclu'><div class='row'><div class='col-5'><img src='https://admin.exceladresse.com/office5/ladresseparis7_020625/catalog/images/pr_p/1/4/6/5/7/3/6/4/14657364a.jpg?version=1791992643' alt='Appartement 3 pi&egrave;ces 52.00 m&sup2;' /></div><div class='col-7'><div><span class='bien-exclusif'>Exclusif</span> <b>Appartement 3 pièces 52.00 m²</b></div><div class='right'><span class='highlight'>2 100 € <small>/ mois  cc</small></span></div></div></div></a>");
+			markers[3].bindPopup(pop);
+			markers[3].on("click", function()
+			{
+				this.openPopup();
+			});
+map.fitBounds(bounds);
+}
+</script>
+</body></html>
