@@ -3,7 +3,7 @@
 A personal aggregator of **new rental listings in Île-de-France**, hosted entirely on GitHub:
 
 - a Python crawler (`scraper/`) normalises each source into one schema; it runs as an always-on worker on Railway every 5 minutes (or, without Railway, from a GitHub Actions cron),
-- the result is committed to `data/listings.json` in this repository,
+- the result is committed to `data/listings.json` on the `data` branch of this repository (`main` only carries code and a snapshot for local development),
 - a static site (`site/`) on GitHub Pages reads that file straight from the repository and filters it in the browser with Jinka's filter vocabulary,
 - new listings matching `filter.json` are posted to a Discord channel through a webhook.
 
@@ -80,14 +80,14 @@ python3 -m http.server 8765                          # then open http://127.0.0.
 
 ## Running the crawler on Railway (every 5 minutes)
 
-`scraper/worker.py` is a long-running loop: crawl, post new matches to Discord, and commit `data/listings.json` to GitHub through the API at most every 15 minutes. `railway.json` holds the start command; Nixpacks builds it from `requirements.txt` and `.python-version`.
+`scraper/worker.py` is a long-running loop: crawl, post new matches to Discord, and commit `data/listings.json` to the `data` branch through the GitHub API at most every 15 minutes. The branch is created from `main` on first run. Data lives on its own branch because Railway redeploys the service on every push to `main`. `railway.json` holds the start command; Nixpacks builds it from `requirements.txt` and `.python-version`.
 
 1. Create a **fine-grained GitHub token**: GitHub → Settings → Developer settings → Fine-grained tokens → Generate. Repository access: only `idf-rent`. Permissions: *Contents: Read and write*. Copy it.
 2. Railway → New project → *Deploy from GitHub repo* → `idf-rent`. Railway detects `railway.json`; no public port is needed (it is a worker, not a web service).
 3. Service → Variables:
    - `GITHUB_TOKEN` = the token from step 1
    - `DISCORD_WEBHOOK_URL` = the same webhook URL as the GitHub secret
-   - optional: `CRAWL_INTERVAL` (seconds, default `300`), `PUSH_INTERVAL` (default `900`), `CRAWL_PAGES` (default `1`), `DEPARTMENTS`, `SOURCES`, `GITHUB_REPO` (default `corbiiy/idf-rent`), `GITHUB_BRANCH` (default `main`)
+   - optional: `CRAWL_INTERVAL` (seconds, default `300`), `PUSH_INTERVAL` (default `900`), `CRAWL_PAGES` (default `1`), `DEPARTMENTS`, `SOURCES`, `GITHUB_REPO` (default `corbiiy/idf-rent`), `GITHUB_BRANCH` (default `data`)
 4. Deploy. The log should show `synced data/listings.json from …`, then one `cycle: …` line per interval and `pushed data/listings.json as …` every 15 minutes. Railway redeploys on every push to `main`, and the worker re-reads the repository copy on start, so nothing is lost across restarts.
 
 While Railway runs, the GitHub cron in `crawl.yml` stays commented out so two crawlers never commit the same file. If you stop using Railway, uncomment the `schedule:` block to go back to the 20-minute GitHub crawl.
@@ -96,7 +96,7 @@ Why not crawl faster than 5 minutes: Bien'ici publishes a few hundred Île-de-Fr
 
 ## Site
 
-`site/index.html` + `app.js` + `style.css`, no build step. On GitHub Pages the page fetches `data/listings.json` from `raw.githubusercontent.com` (fresh within about 5 minutes of a commit), so the site only redeploys when `site/` changes; on a local server it reads the file from the checkout. Filters: rent and area min/max, rooms and bedrooms minimum (`1+`…`5+`), furnished, owner type, DPE classes, zone picker over the 8 IDF departments plus free postal codes, sources, sort. The filter is saved in `localStorage`. The page also stores the timestamp of your last visit and marks listings first seen after it with a **Nouveau** badge (and a "only new" toggle). Each card shows the source label and links to the original ad.
+`site/index.html` + `app.js` + `style.css`, no build step. On GitHub Pages the page fetches `data/listings.json` from the `data` branch via `raw.githubusercontent.com` (fresh within about 5 minutes of a commit), so the site only redeploys when `site/` changes; on a local server it reads the file from the checkout. Filters: rent and area min/max, rooms and bedrooms minimum (`1+`…`5+`), furnished, owner type, DPE classes, zone picker over the 8 IDF departments plus free postal codes, sources, sort. The filter is saved in `localStorage`. The page also stores the timestamp of your last visit and marks listings first seen after it with a **Nouveau** badge (and a "only new" toggle). Each card shows the source label and links to the original ad.
 
 ## Layout
 
@@ -112,7 +112,7 @@ scraper/            Python package (python -m scraper)
   worker.py         always-on loop for Railway: crawl, notify, push data via the GitHub API
   github.py         Git Data API client used by the worker
 tests/              unittest suite with a saved PAP list fixture
-data/listings.json  crawler output (committed by the workflow)
+data/listings.json  crawler output (live copy on the `data` branch; `main` holds a snapshot)
 site/               static front end for GitHub Pages
 filter.json         the saved alert used for Discord alerts
 .github/workflows/  crawl.yml (manual / fallback cron) and pages.yml

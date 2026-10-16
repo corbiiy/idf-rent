@@ -48,6 +48,18 @@ class GitHubFile:
     def head(self) -> str:
         return self._get(f"{API}/repos/{self.repo}/git/ref/heads/{self.branch}")["object"]["sha"]
 
+    def ensure_branch(self, from_branch: str = "main") -> bool:
+        """Create self.branch from `from_branch` if it does not exist. Returns True if created."""
+        r = self.s.get(f"{API}/repos/{self.repo}/git/ref/heads/{self.branch}", timeout=60)
+        if r.status_code == 200:
+            return False
+        if r.status_code != 404:
+            r.raise_for_status()
+        base = self._get(f"{API}/repos/{self.repo}/git/ref/heads/{from_branch}")["object"]["sha"]
+        self._post(f"{API}/repos/{self.repo}/git/refs", {"ref": f"refs/heads/{self.branch}", "sha": base})
+        log.info("created branch %s from %s@%s", self.branch, from_branch, base[:7])
+        return True
+
     def upload(self, content: bytes, message: str) -> str:
         """Commit `content` at self.path on top of the branch head. Returns the new commit sha.
         Raises requests.HTTPError (422) if the branch moved between head() and the ref update."""

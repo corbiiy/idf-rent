@@ -1,13 +1,15 @@
 """Long-running crawler for Railway (or any always-on host).
 
 Every CRAWL_INTERVAL seconds: crawl, post new matches to Discord, and at most every
-PUSH_INTERVAL seconds commit data/listings.json to the GitHub repository (the site on
-GitHub Pages reads that file straight from raw.githubusercontent.com).
+PUSH_INTERVAL seconds commit data/listings.json to the `data` branch of the GitHub
+repository (the site on GitHub Pages reads that file straight from
+raw.githubusercontent.com). Data goes to its own branch so that the commits never
+trigger a Railway redeploy, which watches `main`.
 
 Environment:
   GITHUB_TOKEN         fine-grained token, Contents: read and write on the repo (required unless DRY_RUN)
   GITHUB_REPO          owner/name            (default corbiiy/idf-rent)
-  GITHUB_BRANCH        branch                (default main)
+  GITHUB_BRANCH        branch for data commits (default data; created from main if missing)
   DISCORD_WEBHOOK_URL  webhook               (optional; matches are logged otherwise)
   CRAWL_INTERVAL       seconds between crawls (default 300)
   PUSH_INTERVAL        min seconds between GitHub commits (default 900)
@@ -53,7 +55,7 @@ def main() -> int:
     once = os.environ.get("ONCE") == "1"
     token = os.environ.get("GITHUB_TOKEN")
     repo = os.environ.get("GITHUB_REPO", "corbiiy/idf-rent")
-    branch = os.environ.get("GITHUB_BRANCH", "main")
+    branch = os.environ.get("GITHUB_BRANCH", "data")
 
     gh = None
     if token:
@@ -65,6 +67,8 @@ def main() -> int:
     # Start from the copy in the repository so a redeploy never forgets what was already seen.
     if gh is not None:
         try:
+            if not dry_run:
+                gh.ensure_branch("main")
             content = gh.download()
             if content:
                 store.DATA_FILE.parent.mkdir(parents=True, exist_ok=True)

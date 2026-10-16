@@ -19,7 +19,6 @@ on:
 
 permissions:
   contents: write
-  actions: write   # to dispatch pages.yml after a data commit
 
 concurrency:
   group: crawl
@@ -40,6 +39,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Start from the latest data branch copy
+        run: |
+          if git ls-remote --exit-code --heads origin data > /dev/null; then
+            git fetch origin data
+            git show origin/data:data/listings.json > data/listings.json
+          fi
+
       - name: Crawl, re-check liveness, notify
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -52,20 +58,23 @@ jobs:
             python -m scraper --departments "$DEPARTMENTS" --notify
           fi
 
-      - name: Commit data changes
+      - name: Commit data to the data branch
         run: |
           git config user.name "idf-rent bot"
           git config user.email "idf-rent-bot@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin data > /dev/null; then
+            git fetch origin data
+            git worktree add ../data-wt origin/data
+          else
+            git worktree add -b data ../data-wt
+          fi
+          mkdir -p ../data-wt/data
+          cp data/listings.json ../data-wt/data/listings.json
+          cd ../data-wt
           git add data/listings.json
           if git diff --cached --quiet; then
             echo "no data changes"
             exit 0
           fi
-          git commit -m "data: crawl $(date -u +%Y-%m-%dT%H:%MZ)"
-          # another run may have pushed meanwhile; rebase our single data commit on top
-          git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
-          git push origin "HEAD:${GITHUB_REF_NAME}"
-          # pushes made with GITHUB_TOKEN never trigger other workflows, so deploy explicitly
-          gh workflow run pages.yml --ref "${GITHUB_REF_NAME}"
-        env:
-          GH_TOKEN: ${{ github.token }}
+          git commit -m "data: crawl $(date -u +%Y-%m-%dT%H:%MZ) (actions)"
+          git push origin HEAD:data
