@@ -9,6 +9,11 @@ on:
         description: "Comma-separated IDF department codes (default: all 8)"
         required: false
         default: "75,77,78,91,92,93,94,95"
+      test_alert:
+        description: "Post the 3 latest matching listings to Discord instead of only new ones"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: write
@@ -37,7 +42,13 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DEPARTMENTS: ${{ github.event.inputs.departments || '75,77,78,91,92,93,94,95' }}
-        run: python -m scraper --departments "$DEPARTMENTS" --notify
+          TEST_ALERT: ${{ github.event.inputs.test_alert || 'false' }}
+        run: |
+          if [ "$TEST_ALERT" = "true" ]; then
+            python -m scraper --departments "$DEPARTMENTS" --notify-test
+          else
+            python -m scraper --departments "$DEPARTMENTS" --notify
+          fi
 
       - name: Commit data changes
         run: |

@@ -119,11 +119,16 @@ def send_discord(embeds: list[dict], webhook_url: str) -> bool:
     return resp.ok
 
 
-def notify_new(new: list[Listing], labels: dict[str, str], max_messages: int = 20) -> int:
+def notify_new(new: list[Listing], labels: dict[str, str], max_messages: int = 20, test: bool = False) -> int:
+    """Post the new listings that match filter.json. With test=True, `new` is the whole
+    store and only the 3 most recent matches are posted, to check the webhook works."""
     webhook = os.environ.get("DISCORD_WEBHOOK_URL")
     f = load_filter()
     hits = [l for l in new if matches(l, f)]
-    log.info("notify: %d new listings, %d match filter.json", len(new), len(hits))
+    if test:
+        hits = sorted(hits, key=lambda l: l.first_seen or "", reverse=True)[:3]
+        max_messages = 3
+    log.info("notify%s: %d new listings, %d match filter.json", " (test)" if test else "", len(new), len(hits))
     if not hits:
         return 0
     if not webhook:

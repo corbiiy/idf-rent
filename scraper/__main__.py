@@ -20,6 +20,7 @@ def main(argv=None) -> int:
     p.add_argument("--no-liveness", action="store_true", help="skip re-checking stored links")
     p.add_argument("--no-photo-hash", action="store_true", help="skip downloading first photos for dedupe")
     p.add_argument("--notify", action="store_true", help="post new listings matching filter.json to the Discord webhook")
+    p.add_argument("--notify-test", action="store_true", help="post the 3 most recent stored listings matching filter.json, to check the webhook")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -62,8 +63,11 @@ def main(argv=None) -> int:
     store.save(stored)
     log.info("saved %d listings to %s", len(stored), store.DATA_FILE)
 
-    if args.notify:
-        notify_new(new_total, {s: m.LABEL for s, m in SOURCES.items()})
+    labels = {s: m.LABEL for s, m in SOURCES.items()}
+    if args.notify_test:
+        notify_new(stored, labels, test=True)
+    elif args.notify:
+        notify_new(new_total, labels)
 
     for slug, st in status.items():
         print(f"{slug}: {st}")
