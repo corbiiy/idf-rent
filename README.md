@@ -2,9 +2,9 @@
 
 A personal aggregator of **new rental listings in Île-de-France**, hosted entirely on GitHub:
 
-- a Python crawler (`scraper/`) runs every 20 minutes in GitHub Actions and normalises each source into one schema,
-- the result is committed to `data/listings.json`,
-- a static site (`site/`) on GitHub Pages filters that file in the browser with Jinka's filter vocabulary,
+- a Python crawler (`scraper/`) normalises each source into one schema; it runs as an always-on worker on Railway every 5 minutes (or, without Railway, from a GitHub Actions cron),
+- the result is committed to `data/listings.json` in this repository,
+- a static site (`site/`) on GitHub Pages reads that file straight from the repository and filters it in the browser with Jinka's filter vocabulary,
 - new listings matching `filter.json` are posted to a Discord channel through a webhook.
 
 The mechanism mirrors what the Jinka app does server-side (one normalised schema, a `source` slug per ad, a saved filter, a liveness re-check of stored links). Nothing here talks to Jinka's API.
@@ -76,11 +76,27 @@ python3 -m http.server 8765                          # then open http://127.0.0.
    - Save it as the repository secret `DISCORD_WEBHOOK_URL`.
    Without this secret the workflow still runs; matching listings are printed in the job log instead. Each run posts at most 20 listings (10 embeds per message, each with photo, rent, specs, place and the link to the original ad) plus a one-line count of the rest.
 5. Edit `filter.json` to taste (same keys as the site's filters: `rent_min`, `rent_max`, `area_min`, `area_max`, `room_min`, `bedroom_min`, `furnished` yes/no/ns, `owner_type` Particulier/Agence/ns, `dpe` list, `sources` list, `where.dpts` department codes, `where.postalCodes`). `"ns"` or a missing key means not specified.
-6. Run the crawl once by hand: Actions → *Crawl rentals* → *Run workflow*. It then runs every 20 minutes (GitHub may delay scheduled runs by a few minutes, and pauses schedules on repositories with no activity for 60 days).
+6. Run the crawl once by hand: Actions → *Crawl rentals* → *Run workflow* (tick *test_alert* to post the 3 latest matches and check the webhook).
+
+## Running the crawler on Railway (every 5 minutes)
+
+`scraper/worker.py` is a long-running loop: crawl, post new matches to Discord, and commit `data/listings.json` to GitHub through the API at most every 15 minutes. `railway.json` holds the start command; Nixpacks builds it from `requirements.txt` and `.python-version`.
+
+1. Create a **fine-grained GitHub token**: GitHub → Settings → Developer settings → Fine-grained tokens → Generate. Repository access: only `idf-rent`. Permissions: *Contents: Read and write*. Copy it.
+2. Railway → New project → *Deploy from GitHub repo* → `idf-rent`. Railway detects `railway.json`; no public port is needed (it is a worker, not a web service).
+3. Service → Variables:
+   - `GITHUB_TOKEN` = the token from step 1
+   - `DISCORD_WEBHOOK_URL` = the same webhook URL as the GitHub secret
+   - optional: `CRAWL_INTERVAL` (seconds, default `300`), `PUSH_INTERVAL` (default `900`), `CRAWL_PAGES` (default `1`), `DEPARTMENTS`, `SOURCES`, `GITHUB_REPO` (default `corbiiy/idf-rent`), `GITHUB_BRANCH` (default `main`)
+4. Deploy. The log should show `synced data/listings.json from …`, then one `cycle: …` line per interval and `pushed data/listings.json as …` every 15 minutes. Railway redeploys on every push to `main`, and the worker re-reads the repository copy on start, so nothing is lost across restarts.
+
+While Railway runs, the GitHub cron in `crawl.yml` stays commented out so two crawlers never commit the same file. If you stop using Railway, uncomment the `schedule:` block to go back to the 20-minute GitHub crawl.
+
+Why not crawl faster than 5 minutes: Bien'ici publishes a few hundred Île-de-France rentals a day, so a 5-minute loop already sees each ad within minutes of publication; a tighter loop only adds load on their side.
 
 ## Site
 
-`site/index.html` + `app.js` + `style.css`, no build step. Filters: rent and area min/max, rooms and bedrooms minimum (`1+`…`5+`), furnished, owner type, DPE classes, zone picker over the 8 IDF departments plus free postal codes, sources, sort. The filter is saved in `localStorage`. The page also stores the timestamp of your last visit and marks listings first seen after it with a **Nouveau** badge (and a "only new" toggle). Each card shows the source label and links to the original ad.
+`site/index.html` + `app.js` + `style.css`, no build step. On GitHub Pages the page fetches `data/listings.json` from `raw.githubusercontent.com` (fresh within about 5 minutes of a commit), so the site only redeploys when `site/` changes; on a local server it reads the file from the checkout. Filters: rent and area min/max, rooms and bedrooms minimum (`1+`…`5+`), furnished, owner type, DPE classes, zone picker over the 8 IDF departments plus free postal codes, sources, sort. The filter is saved in `localStorage`. The page also stores the timestamp of your last visit and marks listings first seen after it with a **Nouveau** badge (and a "only new" toggle). Each card shows the source label and links to the original ad.
 
 ## Layout
 
@@ -92,9 +108,13 @@ scraper/            Python package (python -m scraper)
   dedupe.py         URL + fingerprint + photo dHash
   store.py          load/merge/liveness/prune/save data/listings.json
   notify.py         filter.json matching and Discord webhook
+  run.py            one crawl cycle (shared by the CLI and the worker)
+  worker.py         always-on loop for Railway: crawl, notify, push data via the GitHub API
+  github.py         Git Data API client used by the worker
 tests/              unittest suite with a saved PAP list fixture
 data/listings.json  crawler output (committed by the workflow)
 site/               static front end for GitHub Pages
 filter.json         the saved alert used for Discord alerts
-.github/workflows/  crawl.yml (cron */20) and pages.yml
+.github/workflows/  crawl.yml (manual / fallback cron) and pages.yml
+railway.json        Railway start command for the worker
 ```

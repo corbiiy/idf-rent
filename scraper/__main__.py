@@ -5,11 +5,12 @@ import argparse
 import logging
 import sys
 
-from .http import PoliteSession, SourceBlocked
+from .http import PoliteSession
 from .model import IDF_DEPARTMENTS
 from .sources import SOURCES
 from . import store
 from .notify import notify_new
+from .run import run_cycle
 
 
 def main(argv=None) -> int:
@@ -36,30 +37,8 @@ def main(argv=None) -> int:
     stored = store.load()
     log.info("store: %d listings (%d expired)", len(stored), sum(l.expired for l in stored))
 
-    new_total = []
-    status = {}
-    for slug in sources:
-        mod = SOURCES[slug]
-        fresh = []
-        try:
-            for l in mod.fetch(session, departments, max_pages=args.pages):
-                fresh.append(l)
-            status[slug] = f"ok ({len(fresh)} ads)"
-        except SourceBlocked as exc:
-            log.warning("%s: blocked, stopping this source: %s", slug, exc)
-            status[slug] = f"blocked ({exc})"
-        except Exception as exc:
-            log.exception("%s: failed: %s", slug, exc)
-            status[slug] = f"error ({exc})"
-        new = store.merge(stored, fresh, session, hash_photos=not args.no_photo_hash)
-        stored = list({l.id: l for l in stored + new}.values())
-        log.info("%s: %d fetched, %d new", slug, len(fresh), len(new))
-        new_total.extend(new)
-
-    if not args.no_liveness:
-        expired = store.liveness(stored, session)
-        log.info("liveness: %d marked expired", expired)
-    stored = store.prune(stored)
+    stored, new_total, status = run_cycle(stored, session, departments, sources, pages=args.pages,
+                                          liveness=not args.no_liveness, hash_photos=not args.no_photo_hash)
     store.save(stored)
     log.info("saved %d listings to %s", len(stored), store.DATA_FILE)
 

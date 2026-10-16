@@ -3,7 +3,14 @@
 
   const STORAGE_FILTER = "idf-rent:filter";
   const STORAGE_LAST_VISIT = "idf-rent:last-visit";
-  const DATA_PATHS = ["data/listings.json", "../data/listings.json"];
+  // On GitHub Pages read the file straight from the repository (fresh within ~5 minutes,
+  // no redeploy needed); elsewhere (local server) use the file next to the site.
+  const DATA_PATHS = (() => {
+    const m = location.hostname.match(/^([^.]+)\.github\.io$/);
+    const repo = location.pathname.split("/")[1];
+    const raw = m && repo ? [`https://raw.githubusercontent.com/${m[1]}/${repo}/main/data/listings.json`] : [];
+    return raw.concat(["data/listings.json", "../data/listings.json"]);
+  })();
   const MAX_CARDS = 300;
 
   const form = document.getElementById("filter-form");

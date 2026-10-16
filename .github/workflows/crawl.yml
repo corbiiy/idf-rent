@@ -1,8 +1,10 @@
 name: Crawl rentals
 
+# The regular crawl runs on Railway (scraper/worker.py). This workflow is kept for
+# manual runs and webhook tests; uncomment the schedule to crawl from GitHub again.
 on:
-  schedule:
-    - cron: "*/20 * * * *"
+  # schedule:
+  #   - cron: "*/20 * * * *"
   workflow_dispatch:
     inputs:
       departments:
