@@ -2,7 +2,7 @@
   "_comment": "Saved alert, Jinka vocabulary. 'ns' or a missing key means not specified. where.dpts = IDF department codes, where.postalCodes = exact postal codes; a listing matches the zone if its department OR its postal code is listed.",
   "rent_min": "ns",
   "rent_max": 1050,
-  "area_min": 25,
+  "area_min": 14,
   "area_max": "ns",
   "room_min": 1,
   "bedroom_min": "ns",
