@@ -1,5 +1,5 @@
 {
-  "_comment": "Saved alert, Jinka vocabulary. 'ns' or a missing key means not specified. where.dpts = IDF department codes, where.postalCodes = exact postal codes.",
+  "_comment": "Saved alert, Jinka vocabulary. 'ns' or a missing key means not specified. where.dpts = IDF department codes, where.postalCodes = exact postal codes; a listing matches the zone if its department OR its postal code is listed. Zone = Paris + departments within ~1h15 by transit from ENS Paris-Saclay, plus Saint-Denis / La Plaine (RER B).",
   "rent_min": "ns",
   "rent_max": 1050,
   "area_min": 25,
@@ -11,5 +11,17 @@
   "dpe": [],
   "sources": [],
   "blocked_sources": [],
-  "where": { "dpts": ["75", "92", "93", "94"], "postalCodes": [] }
+  "where": {
+    "dpts": [
+      "75",
+      "91",
+      "92",
+      "78",
+      "94"
+    ],
+    "postalCodes": [
+      "93200",
+      "93210"
+    ]
+  }
 }

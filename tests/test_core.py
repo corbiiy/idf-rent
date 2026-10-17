@@ -47,6 +47,14 @@ class FilterTest(unittest.TestCase):
         self.assertFalse(matches(l, {"where": {"dpts": ["92"], "postalCodes": ["75012"]}}))
         self.assertFalse(matches(mk(expired=True), {}))
 
+    def test_zone_is_department_or_postal_code(self):
+        where = {"where": {"dpts": ["75", "92"], "postalCodes": ["93200"]}}
+        self.assertTrue(matches(mk(postal_code="75011"), where))     # department listed
+        self.assertTrue(matches(mk(postal_code="93200"), where))     # postal code listed, department not
+        self.assertFalse(matches(mk(postal_code="93100"), where))    # same department as a listed postal code: no
+        self.assertFalse(matches(mk(postal_code="94200"), where))
+        self.assertFalse(matches(mk(postal_code=None), where))
+
 
 class BieniciTest(unittest.TestCase):
     def test_normalise(self):
