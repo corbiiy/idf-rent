@@ -30,6 +30,7 @@ def matches(l: Listing, f: dict) -> bool:
     """Apply a saved filter. Keys mirror Jinka's alert payload; "ns" / missing = not specified.
 
     rent_min, rent_max, area_min, area_max, room_min, bedroom_min: numbers
+    rent_max_by_dpt: {"75": 1050} overrides rent_max for listings whose postal code starts with that department
     furnished: "yes" | "no" | "ns"
     owner_type: "Particulier" | "Agence" | "ns"
     dpe: list of accepted classes, e.g. ["A","B","C","D"]; [] = any
@@ -41,7 +42,12 @@ def matches(l: Listing, f: dict) -> bool:
         return False
     if not _ns(f.get("rent_min")) and (l.rent is None or l.rent < f["rent_min"]):
         return False
-    if not _ns(f.get("rent_max")) and (l.rent is None or l.rent > f["rent_max"]):
+    rent_max = f.get("rent_max")
+    by_dpt = f.get("rent_max_by_dpt") or {}
+    dept = (l.postal_code or "")[:2]
+    if dept in by_dpt:
+        rent_max = by_dpt[dept]
+    if not _ns(rent_max) and (l.rent is None or l.rent > rent_max):
         return False
     if not _ns(f.get("area_min")) and (l.area is None or l.area < f["area_min"]):
         return False

@@ -1,7 +1,10 @@
 {
-  "_comment": "Saved alert, Jinka vocabulary. 'ns' or a missing key means not specified. where.dpts = IDF department codes, where.postalCodes = exact postal codes; a listing matches the zone if its department OR its postal code is listed.",
+  "_comment": "Saved alert, Jinka vocabulary. 'ns' or a missing key means not specified. rent_max is the default cap; rent_max_by_dpt overrides it per department (first two digits of the postal code). where.dpts = IDF department codes, where.postalCodes = exact postal codes; a listing matches the zone if its department OR its postal code is listed.",
   "rent_min": "ns",
-  "rent_max": 1050,
+  "rent_max": 750,
+  "rent_max_by_dpt": {
+    "75": 1050
+  },
   "area_min": 14,
   "area_max": "ns",
   "room_min": 1,

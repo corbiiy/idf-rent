@@ -47,6 +47,14 @@ class FilterTest(unittest.TestCase):
         self.assertFalse(matches(l, {"where": {"dpts": ["92"], "postalCodes": ["75012"]}}))
         self.assertFalse(matches(mk(expired=True), {}))
 
+    def test_rent_cap_per_department(self):
+        f = {"rent_max": 750, "rent_max_by_dpt": {"75": 1050}}
+        self.assertTrue(matches(mk(postal_code="75011", rent=1000), f))
+        self.assertFalse(matches(mk(postal_code="75011", rent=1100), f))
+        self.assertTrue(matches(mk(postal_code="92100", rent=740), f))
+        self.assertFalse(matches(mk(postal_code="92100", rent=800), f))
+        self.assertFalse(matches(mk(postal_code=None, rent=800), f))   # unknown department: default cap
+
     def test_zone_is_department_or_postal_code(self):
         where = {"where": {"dpts": ["75", "92"], "postalCodes": ["93200"]}}
         self.assertTrue(matches(mk(postal_code="75011"), where))     # department listed
