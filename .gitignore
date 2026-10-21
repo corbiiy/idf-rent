@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 data/*.tmp
 .DS_Store
+local/.env
+local/leboncoin_searches.json
