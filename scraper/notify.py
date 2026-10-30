@@ -26,11 +26,31 @@ def _ns(v):
     return v in (None, "", "ns", [])
 
 
+def rent_cap(l: Listing, f: dict):
+    """The rent cap that applies to `l`: the department override (number or tier list), else rent_max."""
+    by_dpt = f.get("rent_max_by_dpt") or {}
+    dept = (l.postal_code or "")[:2]
+    if dept not in by_dpt:
+        return f.get("rent_max")
+    rule = by_dpt[dept]
+    if not isinstance(rule, list):
+        return rule
+    for tier in rule:
+        above = tier.get("area_above")
+        if above is None or (l.area is not None and l.area > above):
+            return tier.get("rent_max", f.get("rent_max"))
+    return f.get("rent_max")
+
+
 def matches(l: Listing, f: dict) -> bool:
     """Apply a saved filter. Keys mirror Jinka's alert payload; "ns" / missing = not specified.
 
     rent_min, rent_max, area_min, area_max, room_min, bedroom_min: numbers
-    rent_max_by_dpt: {"75": 1050} overrides rent_max for listings whose postal code starts with that department
+    rent_max_by_dpt: per-department override of rent_max, keyed by the first two digits of the
+        postal code. The value is either a number ({"75": 1050}) or an ordered list of tiers
+        ({"75": [{"area_above": 24, "rent_max": 1050}, {"rent_max": 675}]}): the first tier whose
+        condition holds gives the cap; a tier without condition always holds; an unknown area
+        only satisfies tiers without condition.
     furnished: "yes" | "no" | "ns"
     owner_type: "Particulier" | "Agence" | "ns"
     dpe: list of accepted classes, e.g. ["A","B","C","D"]; [] = any
@@ -42,11 +62,7 @@ def matches(l: Listing, f: dict) -> bool:
         return False
     if not _ns(f.get("rent_min")) and (l.rent is None or l.rent < f["rent_min"]):
         return False
-    rent_max = f.get("rent_max")
-    by_dpt = f.get("rent_max_by_dpt") or {}
-    dept = (l.postal_code or "")[:2]
-    if dept in by_dpt:
-        rent_max = by_dpt[dept]
+    rent_max = rent_cap(l, f)
     if not _ns(rent_max) and (l.rent is None or l.rent > rent_max):
         return False
     if not _ns(f.get("area_min")) and (l.area is None or l.area < f["area_min"]):

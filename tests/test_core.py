@@ -55,6 +55,18 @@ class FilterTest(unittest.TestCase):
         self.assertFalse(matches(mk(postal_code="92100", rent=800), f))
         self.assertFalse(matches(mk(postal_code=None, rent=800), f))   # unknown department: default cap
 
+    def test_area_tiered_rent_cap(self):
+        f = {"rent_max": 675, "rent_max_by_dpt": {"75": [{"area_above": 24, "rent_max": 1050}, {"rent_max": 675}]}}
+        self.assertTrue(matches(mk(postal_code="75011", area=30, rent=1000), f))
+        self.assertFalse(matches(mk(postal_code="75011", area=30, rent=1100), f))
+        self.assertTrue(matches(mk(postal_code="75011", area=20, rent=650), f))
+        self.assertFalse(matches(mk(postal_code="75011", area=20, rent=700), f))
+        self.assertFalse(matches(mk(postal_code="75011", area=24, rent=700), f))    # 24 is not above 24
+        self.assertTrue(matches(mk(postal_code="75011", area=24.5, rent=700), f))   # 24.5 is
+        self.assertFalse(matches(mk(postal_code="75011", area=None, rent=700), f))  # unknown area: 675 tier
+        self.assertTrue(matches(mk(postal_code="92120", area=30, rent=670), f))
+        self.assertFalse(matches(mk(postal_code="92120", area=30, rent=700), f))
+
     def test_postal_code_only_zone(self):
         f = {"rent_max": 750, "rent_max_by_dpt": {"75": 1050}, "where": {"dpts": [], "postalCodes": ["75011", "92120"]}}
         self.assertTrue(matches(mk(postal_code="75011", rent=1000), f))    # listed, Paris cap applies
