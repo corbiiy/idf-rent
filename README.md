@@ -11,12 +11,11 @@ The mechanism mirrors what the Jinka app does server-side (one normalised schema
 
 ## Sources
 
-Thirteen modules in `scraper/sources/`, one per site, all reading public search pages with a plain user agent and the rules below. Status on 2026-10-16; the live per-source status (count, last success, last error) is in the `sources` block of `data/listings.json` and shown on the site.
+Twelve modules in `scraper/sources/`, one per site, all reading public search pages with a plain user agent and the rules below. Status on 2026-10-16; the live per-source status (count, last success, last error) is in the `sources` block of `data/listings.json` and shown on the site.
 
 | slug | site | kind | how | status |
 |---|---|---|---|---|
 | `bienici` | [Bien'ici](https://www.bienici.com) | portal | public JSON endpoint its front end uses (`/realEstateAds.json`), per department | working |
-| `locservice` | [LocService](https://www.locservice.fr) | private owners | HTML list per department (`/<dept>/location-<name>.html`, `-pN`) | working |
 | `paruvendu` | [Paruvendu](https://www.paruvendu.fr) | portal, owners and agencies | HTML list per department and kind (`?p=N`); one ad-page GET per never-seen ad outside Paris to get the postal code | working |
 | `pap` | [PAP](https://www.pap.fr) | private owners | HTML list per department (`-g<id>-N`) | intermittent: Cloudflare challenge (HTTP 403) on most requests; retried hourly, stops cleanly on 403 |
 | `era` | [ERA](https://www.eraimmobilier.com) | agency network | Angular transfer state embedded in `/location-<kind>/ile-de-france-1/<dept>` | working |
@@ -29,7 +28,7 @@ Thirteen modules in `scraper/sources/`, one per site, all reading public search 
 | `arthurimmo` | [Arthurimmo](https://www.arthurimmo.com) | agency network | region page `/immobilier/location/immo-ile-de-france/bien-<kind>?sort=-created_at&page=N` (2.5 MB pages), every 30 min | working |
 | `orpi` | [Orpi](https://www.orpi.com) | agency network | the search page embeds the whole department result set as JSON (`data-result` attribute); one GET per department, every 30 min | working |
 
-Per-field coverage differs by site: DPE comes from Bien'ici, PAP, Paruvendu, ERA, Foncia; coordinates from Bien'ici, ERA, L'Adresse, Orpi; posting dates from Bien'ici, ERA, Foncia, Orpi, Paruvendu (last-update date). Agency-network ads are tagged `owner_type: Agence`, LocService and PAP `Particulier`, Paruvendu per card.
+Per-field coverage differs by site: DPE comes from Bien'ici, PAP, Paruvendu, ERA, Foncia; coordinates from Bien'ici, ERA, L'Adresse, Orpi; posting dates from Bien'ici, ERA, Foncia, Orpi, Paruvendu (last-update date). Agency-network ads are tagged `owner_type: Agence`, PAP `Particulier`, Paruvendu per card.
 
 Adding a source is one module exposing `SLUG`, `LABEL`, `COLOR`, optional `MIN_INTERVAL`, `fetch()` and `is_live()` (see `scraper/sources/__init__.py`), a trimmed fixture under `tests/fixtures/` and a unittest. Modules are discovered automatically; a failing or blocked source records `last_error` in the status block and never stops the others.
 
@@ -53,6 +52,7 @@ Each of these was re-checked in a real browser to see which endpoint its own fro
 | Guy Hoquet | hash-routed search app whose results never appear as an observable request (only a location autocomplete); no server-side list |
 | Nestenn | the only result page, `/listing`, is disallowed by `robots.txt`; the static `/location-appartement` pages show six featured ads nationwide |
 | Breteuil | site unreachable (also from a browser) |
+| LocService | crawled from 2026-10-16 to 2026-11-01, then removed at the user's request: too many scam ads; `locservice` also sits in `blocked_sources` as a guard |
 | Ouest-France Immo | `robots.txt` disallows `/louer/` and `/annonce/`; little IDF stock anyway |
 | Barnes, Emile Garcin, Engel & Völkers | `robots.txt` disallows their search pages, or listings load only client-side; luxury segment |
 | Studapart, Immojeune | public pages list student residences, not individual ads |

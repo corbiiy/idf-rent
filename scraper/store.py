@@ -139,5 +139,10 @@ def liveness(stored: list[Listing], session: PoliteSession, max_checks: int = 60
 
 
 def prune(stored: list[Listing], keep_expired_days: int = 14) -> list[Listing]:
+    """Drop expired listings older than `keep_expired_days` and every listing from a source
+    that is no longer registered (a removed module takes its old ads with it)."""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=keep_expired_days)).isoformat()
-    return [l for l in stored if not (l.expired and (l.last_seen or "") < cutoff)]
+    dropped = sum(1 for l in stored if l.source not in SOURCES)
+    if dropped:
+        log.info("prune: dropping %d listings from removed sources", dropped)
+    return [l for l in stored if l.source in SOURCES and not (l.expired and (l.last_seen or "") < cutoff)]

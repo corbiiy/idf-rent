@@ -59,6 +59,16 @@ class RunCycleTest(unittest.TestCase):
         self.assertNotIn("b", status)
 
 
+class PruneTest(unittest.TestCase):
+    def test_removed_source_is_dropped(self):
+        from scraper import store
+        from scraper.run import SOURCES
+        keep = mk(id="bienici:1", source="bienici", url="https://b/1")
+        gone = mk(id="locservice:1", source="locservice", url="https://l/1")
+        self.assertNotIn("locservice", SOURCES)
+        self.assertEqual([l.id for l in store.prune([keep, gone])], ["bienici:1"])
+
+
 class GeoDedupeTest(unittest.TestCase):
     def test_same_ad_on_two_networks_without_photo_hash(self):
         a = mk(id="era:1", source="era", url="https://era/1", lat=48.85612, lng=2.35223)

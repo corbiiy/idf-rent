@@ -21,7 +21,9 @@
   "owner_type": "ns",
   "dpe": [],
   "sources": [],
-  "blocked_sources": [],
+  "blocked_sources": [
+    "locservice"
+  ],
   "where": {
     "dpts": [],
     "postalCodes": [
