@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>idf-rent · alertes leboncoin</title>
+  <style>
+    :root { --bg: #f6f4ef; --surface: #fff; --text: #1f1d1a; --muted: #6b665d; --border: #ddd8cc; --accent: #b5471c; --ok: #1d6b3a; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #171614; --surface: #211f1c; --text: #ece8df; --muted: #a39d91; --border: #3a3631; --accent: #e07a4a; --ok: #6fcf8f; } }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.45; }
+    main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { font-size: 1.25rem; margin: 0 0 4px; }
+    .sub { color: var(--muted); margin: 0 0 24px; font-size: .9rem; }
+    section { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    .hint { color: var(--muted); font-size: .8125rem; margin: 4px 0 12px; }
+    textarea, input[type=text], input[type=url], input[type=number] { width: 100%; box-sizing: border-box; font: inherit; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+    textarea { min-height: 120px; font-family: ui-monospace, Menlo, monospace; font-size: .8125rem; }
+    button { font: inherit; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; margin-right: 8px; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .status { font-size: .875rem; }
+    .status li { margin: 2px 0; }
+    .ok { color: var(--ok); } .bad { color: var(--accent); }
+    pre { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: .75rem; max-height: 200px; overflow: auto; white-space: pre-wrap; }
+    #msg { margin-left: 8px; color: var(--muted); font-size: .875rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>idf-rent · alertes leboncoin</h1>
+  <p class="sub">Vos propres recherches leboncoin, rouvertes dans des onglets épinglés toutes les quelques minutes. Nouvelles annonces conformes au filtre du dépôt → Discord.</p>
+
+  <section>
+    <label for="searches">Recherches (une URL leboncoin par ligne)</label>
+    <p class="hint">Sur leboncoin.fr : Immobilier → Locations, réglez vos filtres (codes postaux, loyer max, surface, tri « Plus récentes »), puis copiez l'adresse de la page. Une recherche par zone.</p>
+    <textarea id="searches" placeholder="https://www.leboncoin.fr/recherche?category=10&amp;locations=Paris_75011&amp;real_estate_type=1&amp;price=min-1050"></textarea>
+  </section>
+
+  <section>
+    <label for="webhook">Webhook Discord</label>
+    <input id="webhook" type="url" placeholder="https://discord.com/api/webhooks/…">
+    <p class="hint">Le même webhook que le worker Railway, ou un autre salon.</p>
+    <label for="interval">Intervalle entre deux cycles (secondes, minimum 180)</label>
+    <input id="interval" type="number" min="180" step="30" value="300">
+    <div class="row" style="margin-top:12px">
+      <button class="primary" id="save">Enregistrer</button>
+      <button id="test">Tester le webhook</button>
+      <button id="run">Lancer un cycle maintenant</button>
+      <span id="msg"></span>
+    </div>
+  </section>
+
+  <section>
+    <label>État</label>
+    <ul class="status" id="status"></ul>
+    <details id="sampleBox" hidden>
+      <summary>Dernière page sans annonce reconnue (pour ajuster le parseur)</summary>
+      <button id="downloadSample">Télécharger l'extrait HTML</button>
+    </details>
+    <details>
+      <summary>Journal</summary>
+      <pre id="log"></pre>
+    </details>
+  </section>
+
+  <p class="hint">Chrome doit rester ouvert. Aucun contournement de protection : si leboncoin affiche une vérification, l'extension s'arrête, vous prévient une fois par heure sur Discord et affiche « ! » sur son icône ; résolvez-la vous-même dans l'onglet épinglé.</p>
+</main>
+<script src="options.js"></script>
+</body>
+</html>

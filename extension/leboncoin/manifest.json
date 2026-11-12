@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "idf-rent leboncoin alerts",
+  "version": "1.0.0",
+  "description": "Re-opens your own leboncoin rental searches every few minutes in pinned tabs and posts new ads matching the idf-rent filter to your Discord channel. No bot-detection evasion of any kind.",
+  "permissions": ["alarms", "storage", "tabs", "scripting"],
+  "host_permissions": ["https://www.leboncoin.fr/*", "https://discord.com/*", "https://raw.githubusercontent.com/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "idf-rent leboncoin alerts", "default_icon": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" } },
+  "options_page": "options.html",
+  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+}

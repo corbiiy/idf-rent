@@ -33,7 +33,7 @@ Adding a source is one module exposing `SLUG`, `LABEL`, `COLOR`, optional `MIN_I
 
 ### Excluded on purpose
 
-- **Leboncoin** and the **SeLoger group** (SeLoger, Logic-Immo, Belles Demeures): court-protected databases (rulings against Jinka in December 2025 and April 2026), DataDome-guarded, and their terms forbid automated access. Not crawled, not proxied.
+- **Leboncoin** and the **SeLoger group** (SeLoger, Logic-Immo, Belles Demeures): court-protected databases (rulings against Jinka in December 2025 and April 2026), DataDome-guarded, and their terms forbid automated access. Not crawled, not proxied, never published here. For leboncoin only, `extension/leboncoin/` holds an optional Chrome extension that re-opens *your own* saved searches in *your own* browser and alerts you on Discord, with no bot-detection evasion; its ads never leave your browser (see its README).
 - **Jinka's own API** (`api.jinka.fr`): private, behind user tokens.
 - Anything a site's `robots.txt` disallows for our user agent.
 
