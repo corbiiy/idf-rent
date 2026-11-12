@@ -22,7 +22,8 @@
   "dpe": [],
   "sources": [],
   "blocked_sources": [
-    "locservice"
+    "locservice",
+    "paruvendu"
   ],
   "where": {
     "dpts": [],
